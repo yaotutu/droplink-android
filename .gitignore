@@ -1,15 +1,126 @@
+# ===========================
+# Android Studio / IntelliJ IDEA
+# ===========================
 *.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+.idea/
+.gradle/
 local.properties
+
+# 保留代码样式和检查配置(可选,根据团队需求决定)
+!.idea/codeStyles/
+!.idea/inspectionProfiles/
+
+# ===========================
+# Gradle 构建系统
+# ===========================
+.gradle
+/build/
+*/build/
+gradle-app.setting
+
+# Gradle Wrapper (通常应该提交,但如果团队统一使用本地 Gradle,可以忽略)
+# !gradle/wrapper/gradle-wrapper.jar
+
+# ===========================
+# Android 构建产物
+# ===========================
+/captures/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+
+# 签名文件 (敏感信息,绝不应提交!)
+*.jks
+*.keystore
+keystore.properties
+release.properties
+
+# ===========================
+# NDK (Native Development)
+# ===========================
+.externalNativeBuild/
+.cxx/
+obj/
+
+# ===========================
+# Kotlin
+# ===========================
+.kotlin/
+
+# ===========================
+# Compose
+# ===========================
+# Compose 编译器生成的文件通常在 build/ 目录,已被上面的规则覆盖
+
+# ===========================
+# 本地测试结果
+# ===========================
+/test-results/
+/androidTest-results/
+*.log
+
+# ===========================
+# 操作系统文件
+# ===========================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+.directory
+
+# ===========================
+# 其他 IDE
+# ===========================
+# VS Code
+.vscode/
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# ===========================
+# 依赖分析和性能分析
+# ===========================
+/lint-report.html
+lint-results*.xml
+/profiler/
+
+# ===========================
+# Firebase (如果使用)
+# ===========================
+google-services.json
+GoogleService-Info.plist
+
+# ===========================
+# 敏感配置文件
+# ===========================
+# API 密钥配置文件
+secrets.properties
+apikey.properties
+
+# ===========================
+# 版本控制
+# ===========================
+.hg/
+.svn/
+
+# ===========================
+# 临时文件
+# ===========================
+*.swp
+*.bak
+*.tmp
+*.temp
+*~.nib

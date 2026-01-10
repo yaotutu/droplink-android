@@ -155,11 +155,10 @@ class ShareViewModel(
                 _uiState.value = ShareUiState.Processing(30)
                 delay(200)
 
-                // 发送到 Gotify
+                // 发送到 Gotify（使用新格式）
                 val response = gotifyRepository.sendUrlShare(
-                    url = sharedData.text,
-                    title = sharedData.subject ?: "网页分享",
-                    message = sharedData.text
+                    url = sharedData.text
+                    // priority 使用默认值 5
                 )
 
                 Log.d(TAG, "Message sent successfully, ID: ${response.id}")

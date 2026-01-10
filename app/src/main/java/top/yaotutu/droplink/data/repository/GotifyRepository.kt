@@ -3,11 +3,13 @@ package top.yaotutu.droplink.data.repository
 import android.content.Context
 import top.yaotutu.droplink.data.manager.TokenManager
 import top.yaotutu.droplink.data.network.RetrofitClient
+import top.yaotutu.droplink.data.network.dto.request.ActionData
+import top.yaotutu.droplink.data.network.dto.request.ContentData
 import top.yaotutu.droplink.data.network.dto.request.DroplinkData
-import top.yaotutu.droplink.data.network.dto.request.DroplinkOptions
 import top.yaotutu.droplink.data.network.dto.request.GotifyExtras
 import top.yaotutu.droplink.data.network.dto.request.GotifyMessageRequest
 import top.yaotutu.droplink.data.network.dto.response.GotifyMessageResponse
+import top.yaotutu.droplink.util.MessageIdGenerator
 
 /**
  * Gotify Repository
@@ -33,22 +35,25 @@ class GotifyRepository(context: Context) {
     private val gotifyApiService = RetrofitClient.getInstance(context).getGotifyApiService()
 
     /**
-     * 发送 URL 分享消息到 Gotify
+     * 发送 URL 分享消息到 Gotify（新格式）
      *
      * @param url 要分享的 URL
-     * @param title 分享标题（可选，默认为 "网页分享"）
-     * @param message 消息预览文本（可选，默认使用 URL）
      * @param priority 优先级 0-10（可选，默认 5）
      * @return 发送成功的消息响应
      * @throws Exception 如果 Token 不存在或网络请求失败
+     *
+     * 新格式说明：
+     * - title 固定为 "Droplink"
+     * - sender 固定为 "android"
+     * - content.type 固定为 "url"
+     * - actions 固定包含一个 openTab 动作
      *
      * 使用示例：
      * ```kotlin
      * val repository = GotifyRepository(context)
      * try {
      *     val response = repository.sendUrlShare(
-     *         url = "https://github.com",
-     *         title = "GitHub 主页"
+     *         url = "https://github.com/yaotutu/droplink"
      *     )
      *     println("消息发送成功，ID: ${response.id}")
      * } catch (e: Exception) {
@@ -58,29 +63,41 @@ class GotifyRepository(context: Context) {
      */
     suspend fun sendUrlShare(
         url: String,
-        title: String = "网页分享",
-        message: String = url,
         priority: Int = 5
     ): GotifyMessageResponse {
         // 1. 获取 Token
         val appToken = tokenManager.getAppToken()
             ?: throw IllegalStateException("未找到 Gotify Token，请先登录")
 
-        // 2. 构建请求
+        // 2. 生成消息 ID 和时间戳
+        val messageId = MessageIdGenerator.generate()
+        val timestamp = System.currentTimeMillis()
+
+        // 3. 构建请求
         val request = GotifyMessageRequest(
-            title = title,
-            message = message,
+            title = "Droplink",  // 固定标题
+            message = url,       // 消息预览文本为 URL
             priority = priority,
             extras = GotifyExtras(
                 droplink = DroplinkData(
-                    action = "openTab",
-                    url = url,
-                    options = DroplinkOptions(activate = true)
+                    id = messageId,
+                    timestamp = timestamp,
+                    sender = "android",  // 固定发送者
+                    content = ContentData(
+                        type = "url",    // 固定内容类型
+                        value = url
+                    ),
+                    actions = listOf(
+                        ActionData(
+                            type = "openTab",  // 固定动作类型
+                            params = null      // 暂不需要参数
+                        )
+                    )
                 )
             )
         )
 
-        // 3. 发送请求
+        // 4. 发送请求
         return gotifyApiService.sendMessage(
             token = appToken,
             message = request
