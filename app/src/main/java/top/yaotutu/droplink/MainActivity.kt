@@ -11,17 +11,26 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import top.yaotutu.droplink.data.manager.SessionManager
+import top.yaotutu.droplink.data.repository.GotifyRepository
 import top.yaotutu.droplink.ui.navigation.AppNavGraph
 import top.yaotutu.droplink.ui.navigation.NavRoutes
 import top.yaotutu.droplink.ui.share.NavigationEvent
+import top.yaotutu.droplink.ui.share.ShareUiState
 import top.yaotutu.droplink.ui.share.ShareViewModel
 import top.yaotutu.droplink.ui.share.ShareViewModelFactory
 import top.yaotutu.droplink.ui.theme.DroplinkTheme
 import top.yaotutu.droplink.util.Config
+import top.yaotutu.droplink.util.NotificationHelper
 
 /**
  * 主 Activity
@@ -48,6 +57,15 @@ class MainActivity : ComponentActivity() {
     private var shareViewModel: ShareViewModel? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // 根据 Intent 动态设置主题（必须在 super.onCreate 之前）
+        // 如果是分享 Intent，使用透明主题，用户不会看到 Activity
+        // 否则使用正常主题
+        if (isShareIntent(intent)) {
+            setTheme(R.style.Theme_Droplink_Transparent)
+        } else {
+            setTheme(R.style.Theme_Droplink)
+        }
+
         super.onCreate(savedInstanceState)
 
         Log.d(TAG, "onCreate called")
@@ -58,6 +76,17 @@ class MainActivity : ComponentActivity() {
         // 初始化配置
         Config.init(applicationContext)
 
+        // 检查是否是分享 Intent
+        val isShareIntent = isShareIntent(intent)
+
+        if (isShareIntent) {
+            // 后台分享模式：不显示 UI
+            Log.d(TAG, "Entering background share mode")
+            handleBackgroundShare(intent)
+            return  // 不执行 setContent，不显示 UI
+        }
+
+        // 正常模式：显示 UI
         enableEdgeToEdge()
         setContent {
             DroplinkTheme {
@@ -74,43 +103,12 @@ class MainActivity : ComponentActivity() {
                     )
                     shareViewModel = viewModel
 
-                    // 检查是否是分享 Intent
-                    val isShareIntent = isShareIntent(intent)
-                    Log.d(TAG, "isShareIntent: $isShareIntent")
-
-                    val startDestination = if (isShareIntent) {
-                        Log.d(TAG, "Starting with SHARE destination")
-                        // 如果是分享 Intent，直接导航到分享页面
-                        // 在这里处理 Intent 数据
-                        viewModel.handleShareIntent(intent)
-                        NavRoutes.SHARE
-                    } else {
-                        Log.d(TAG, "Starting with default destination")
-                        // 否则根据登录状态决定起始页面
-                        null
-                    }
-
-                    // 监听导航事件（用于 onNewIntent 触发的导航）
-                    LaunchedEffect(viewModel) {
-                        viewModel.navigationEvent.collectLatest { event ->
-                            when (event) {
-                                is NavigationEvent.NavigateToShare -> {
-                                    Log.d(TAG, "Received navigation event, navigating to SHARE")
-                                    navController.navigate(NavRoutes.SHARE) {
-                                        // 避免重复添加
-                                        launchSingleTop = true
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // 设置应用导航图
+                    // 设置应用导航图（根据登录状态决定起始页面）
                     AppNavGraph(
                         navController = navController,
                         sessionManager = sessionManager,
                         shareViewModel = viewModel,
-                        startDestination = startDestination
+                        startDestination = null  // 正常模式不自动导航到分享页面
                     )
                 }
             }
@@ -138,11 +136,103 @@ class MainActivity : ComponentActivity() {
         // 检查是否是分享 Intent
         if (isShareIntent(intent)) {
             Log.d(TAG, "Received share intent in onNewIntent")
-            // 处理分享数据
-            shareViewModel?.handleShareIntent(intent)
+            // 后台处理分享数据
+            handleBackgroundShare(intent)
+        }
+    }
 
-            // TODO: 如果需要，可以在这里导航到分享页面
-            // 但这需要访问 navController，可以通过事件总线或其他方式实现
+    /**
+     * 处理后台分享（无 UI 模式）
+     *
+     * React 概念对标：
+     * - 类似于 Web Worker 或 Service Worker 的后台任务处理
+     * - 没有 UI 渲染，只有业务逻辑执行
+     *
+     * 工作流程：
+     * 1. 立即移到后台（moveTaskToBack）- 用户不可见
+     * 2. 创建 NotificationHelper 和 ShareViewModel
+     * 3. 解析 Intent 数据
+     * 4. 等待解析完成（使用 Flow + withTimeout）
+     * 5. 调用后台处理方法
+     * 6. 显示通知
+     * 7. 关闭 Activity
+     *
+     * Android 特性：
+     * - moveTaskToBack(true): 将 Activity 移到后台，用户看不到
+     * - lifecycleScope: Activity 生命周期相关的协程作用域
+     * - withTimeout: 防止无限等待，30 秒超时
+     *
+     * @param intent 分享 Intent
+     */
+    private fun handleBackgroundShare(intent: Intent?) {
+        Log.d(TAG, "handleBackgroundShare: start")
+
+        // 1. 立即移到后台（用户不可见）
+        moveTaskToBack(true)
+        Log.d(TAG, "Activity moved to background")
+
+        // 2. 创建 NotificationHelper
+        val notificationHelper = NotificationHelper(applicationContext)
+        notificationHelper.createNotificationChannel()
+
+        // 3. 创建 ShareViewModel
+        val repository = GotifyRepository(applicationContext)
+        val viewModel = ShareViewModel(repository)
+
+        // 4. 解析 Intent
+        viewModel.handleShareIntent(intent)
+
+        // 5. 在协程中等待解析完成，然后处理
+        lifecycleScope.launch {
+            try {
+                // 设置超时（30 秒）
+                withTimeout(30_000) {
+                    // 等待状态变为 Success 或 Error
+                    // filter: 只关注 Success 和 Error 状态
+                    // first: 获取第一个匹配的状态（然后自动取消监听）
+                    viewModel.uiState
+                        .filter { it is ShareUiState.Success || it is ShareUiState.Error }
+                        .first()
+                        .let { state ->
+                            when (state) {
+                                is ShareUiState.Success -> {
+                                    Log.d(TAG, "Parse success, processing in background")
+                                    // 后台处理分享数据
+                                    viewModel.processSharedDataInBackground(
+                                        onSuccess = { url ->
+                                            Log.d(TAG, "Share success: $url")
+                                            notificationHelper.showShareSuccessNotification(url)
+                                            finish()
+                                        },
+                                        onError = { error ->
+                                            Log.e(TAG, "Share error: $error")
+                                            notificationHelper.showShareErrorNotification(error)
+                                            finish()
+                                        }
+                                    )
+                                }
+                                is ShareUiState.Error -> {
+                                    Log.e(TAG, "Parse error: ${state.message}")
+                                    notificationHelper.showShareErrorNotification(state.message)
+                                    finish()
+                                }
+                                else -> {
+                                    // 不应该到达这里（filter 已经过滤了其他状态）
+                                    Log.w(TAG, "Unexpected state: $state")
+                                    finish()
+                                }
+                            }
+                        }
+                }
+            } catch (e: TimeoutCancellationException) {
+                Log.e(TAG, "Background share timeout", e)
+                notificationHelper.showShareErrorNotification("处理超时，请重试")
+                finish()
+            } catch (e: Exception) {
+                Log.e(TAG, "Background share error", e)
+                notificationHelper.showShareErrorNotification("处理失败: ${e.message}")
+                finish()
+            }
         }
     }
 

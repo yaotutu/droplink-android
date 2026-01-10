@@ -182,6 +182,87 @@ class ShareViewModel(
     fun reset() {
         _uiState.value = ShareUiState.Idle
     }
+
+    /**
+     * 后台处理分享数据（无 UI 模式）
+     *
+     * 与 processSharedData() 的区别：
+     * - processSharedData(): 有 UI 模式，通过 StateFlow 更新 UI 状态
+     * - processSharedDataInBackground(): 无 UI 模式，通过回调通知结果
+     *
+     * React 概念对标：
+     * - 类似于 Promise-based 的异步函数：
+     *   const processInBackground = async () => {
+     *       try {
+     *           const result = await sendToGotify(data)
+     *           onSuccess(result)
+     *       } catch (error) {
+     *           onError(error.message)
+     *       }
+     *   }
+     *
+     * @param onSuccess 成功回调，参数为分享的 URL
+     * @param onError 失败回调，参数为错误信息
+     *
+     * 使用场景：
+     * - 从 MainActivity 后台模式调用
+     * - 不需要 UI 展示进度
+     * - 通过 Notification 通知用户结果
+     *
+     * 使用示例：
+     * ```kotlin
+     * viewModel.processSharedDataInBackground(
+     *     onSuccess = { url ->
+     *         notificationHelper.showShareSuccessNotification(url)
+     *         finish()
+     *     },
+     *     onError = { error ->
+     *         notificationHelper.showShareErrorNotification(error)
+     *         finish()
+     *     }
+     * )
+     * ```
+     */
+    fun processSharedDataInBackground(
+        onSuccess: (url: String) -> Unit,
+        onError: (errorMessage: String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                // 1. 获取当前状态
+                val currentState = _uiState.value
+                if (currentState !is ShareUiState.Success) {
+                    onError("未接收到分享数据")
+                    return@launch
+                }
+
+                val sharedData = currentState.sharedData
+
+                // 2. 验证数据类型（当前只支持文本/URL）
+                if (sharedData.type != ShareType.TEXT || sharedData.text.isNullOrBlank()) {
+                    onError("暂不支持此类型的分享")
+                    return@launch
+                }
+
+                // 3. 检查登录状态
+                if (!gotifyRepository.hasValidToken()) {
+                    onError("未登录，请先登录后再分享")
+                    return@launch
+                }
+
+                // 4. 发送到 Gotify
+                Log.d(TAG, "Background processing: sending to Gotify...")
+                val response = gotifyRepository.sendUrlShare(url = sharedData.text)
+
+                Log.d(TAG, "Background processing: success, ID=${response.id}")
+                onSuccess(sharedData.text)
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Background processing failed", e)
+                onError("发送失败: ${e.message}")
+            }
+        }
+    }
 }
 
 /**
