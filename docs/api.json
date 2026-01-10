@@ -1,0 +1,717 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Droplink Server API",
+    "description": "Gotify 用户管理服务 API 文档",
+    "version": "1.0.0"
+  },
+  "tags": [
+    {
+      "name": "认证",
+      "description": "用户认证相关接口"
+    },
+    {
+      "name": "系统",
+      "description": "系统状态相关接口"
+    },
+    {
+      "name": "管理员",
+      "description": "超级管理员用户管理接口（需要 Bearer Token 认证）"
+    }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "operationId": "getApiHealth",
+        "summary": "健康检查",
+        "description": "检查服务器、数据库和 Gotify 的连接状态。返回各组件的连接状态和当前时间戳。",
+        "tags": [
+          "系统"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/auth/send-code": {
+      "post": {
+        "parameters": [],
+        "operationId": "postApiAuthSend-code",
+        "summary": "发送验证码",
+        "description": "向指定邮箱发送验证码。测试模式下验证码固定为 0000。",
+        "tags": [
+          "认证"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "description": "用户邮箱地址",
+                    "format": "email",
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "description": "用户邮箱地址",
+                    "format": "email",
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "text/plain": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "description": "用户邮箱地址",
+                    "format": "email",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "parameters": [],
+        "operationId": "postApiAuthRegister",
+        "summary": "用户注册",
+        "description": "使用邮箱和验证码注册新用户。注册成功后自动在 Gotify 创建账号，并返回客户端 Token（接收消息）和应用 Token（发送消息）。",
+        "tags": [
+          "认证"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "code"
+                ],
+                "properties": {
+                  "email": {
+                    "description": "用户邮箱地址",
+                    "format": "email",
+                    "type": "string"
+                  },
+                  "code": {
+                    "description": "验证码（测试模式下为 0000）",
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "code"
+                ],
+                "properties": {
+                  "email": {
+                    "description": "用户邮箱地址",
+                    "format": "email",
+                    "type": "string"
+                  },
+                  "code": {
+                    "description": "验证码（测试模式下为 0000）",
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "text/plain": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "code"
+                ],
+                "properties": {
+                  "email": {
+                    "description": "用户邮箱地址",
+                    "format": "email",
+                    "type": "string"
+                  },
+                  "code": {
+                    "description": "验证码（测试模式下为 0000）",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "parameters": [],
+        "operationId": "postApiAuthLogin",
+        "summary": "用户登录",
+        "description": "使用邮箱和验证码登录。登录成功后返回已存储的 Gotify Tokens。",
+        "tags": [
+          "认证"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "code"
+                ],
+                "properties": {
+                  "email": {
+                    "description": "用户邮箱地址",
+                    "format": "email",
+                    "type": "string"
+                  },
+                  "code": {
+                    "description": "验证码（测试模式下为 0000）",
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "code"
+                ],
+                "properties": {
+                  "email": {
+                    "description": "用户邮箱地址",
+                    "format": "email",
+                    "type": "string"
+                  },
+                  "code": {
+                    "description": "验证码（测试模式下为 0000）",
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "text/plain": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "code"
+                ],
+                "properties": {
+                  "email": {
+                    "description": "用户邮箱地址",
+                    "format": "email",
+                    "type": "string"
+                  },
+                  "code": {
+                    "description": "验证码（测试模式下为 0000）",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/auth/verify": {
+      "post": {
+        "parameters": [],
+        "operationId": "postApiAuthVerify",
+        "summary": "统一身份验证（推荐）",
+        "description": "自动判断是注册还是登录，用户无需关心。未注册时自动创建账号，已注册时直接返回 Token。响应中的 isNewUser 字段标识是否为新注册用户。",
+        "tags": [
+          "认证"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "code"
+                ],
+                "properties": {
+                  "email": {
+                    "description": "用户邮箱地址",
+                    "format": "email",
+                    "type": "string"
+                  },
+                  "code": {
+                    "description": "验证码（测试模式下为 0000）",
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "code"
+                ],
+                "properties": {
+                  "email": {
+                    "description": "用户邮箱地址",
+                    "format": "email",
+                    "type": "string"
+                  },
+                  "code": {
+                    "description": "验证码（测试模式下为 0000）",
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "text/plain": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "code"
+                ],
+                "properties": {
+                  "email": {
+                    "description": "用户邮箱地址",
+                    "format": "email",
+                    "type": "string"
+                  },
+                  "code": {
+                    "description": "验证码（测试模式下为 0000）",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "parameters": [
+          {
+            "description": "页码（从 1 开始）",
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "page",
+            "required": false
+          },
+          {
+            "description": "每页数量",
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          }
+        ],
+        "operationId": "getApiAdminUsers",
+        "summary": "获取所有用户列表",
+        "description": "分页查询所有注册用户，包含禁用状态。需要管理员认证。",
+        "tags": [
+          "管理员"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/admin/users/{email}": {
+      "get": {
+        "parameters": [
+          {
+            "description": "用户邮箱",
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "email",
+            "required": true
+          }
+        ],
+        "operationId": "getApiAdminUsersByEmail",
+        "summary": "获取用户详情",
+        "description": "获取指定用户的详细信息，包括 Gotify 同步状态。需要管理员认证。",
+        "tags": [
+          "管理员"
+        ],
+        "responses": {
+          "200": {}
+        }
+      },
+      "delete": {
+        "parameters": [
+          {
+            "description": "用户邮箱",
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "email",
+            "required": true
+          }
+        ],
+        "operationId": "deleteApiAdminUsersByEmail",
+        "summary": "删除用户",
+        "description": "删除指定用户及其在 Gotify 的所有数据（用户、应用、客户端）。需要管理员认证。",
+        "tags": [
+          "管理员"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/admin/users/{email}/disable": {
+      "post": {
+        "parameters": [
+          {
+            "description": "用户邮箱",
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "email",
+            "required": true
+          }
+        ],
+        "operationId": "postApiAdminUsersByEmailDisable",
+        "summary": "禁用用户",
+        "description": "禁用指定用户，禁用后用户无法登录。需要管理员认证。",
+        "tags": [
+          "管理员"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "description": "禁用原因",
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "description": "禁用原因",
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "text/plain": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "description": "禁用原因",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/admin/users/{email}/enable": {
+      "post": {
+        "parameters": [
+          {
+            "description": "用户邮箱",
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "email",
+            "required": true
+          }
+        ],
+        "operationId": "postApiAdminUsersByEmailEnable",
+        "summary": "启用用户",
+        "description": "启用已禁用的用户。需要管理员认证。",
+        "tags": [
+          "管理员"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/admin/users/{email}/reset-tokens": {
+      "post": {
+        "parameters": [
+          {
+            "description": "用户邮箱",
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "email",
+            "required": true
+          }
+        ],
+        "operationId": "postApiAdminUsersByEmailReset-tokens",
+        "summary": "重置用户 Tokens",
+        "description": "重置用户的 Gotify Tokens（客户端 Token 和应用 Token）。需要管理员认证。",
+        "tags": [
+          "管理员"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/admin/users/{email}/messages": {
+      "get": {
+        "parameters": [
+          {
+            "description": "用户邮箱",
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "email",
+            "required": true
+          },
+          {
+            "description": "页码（从 1 开始）",
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "page",
+            "required": false
+          },
+          {
+            "description": "每页数量",
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          }
+        ],
+        "operationId": "getApiAdminUsersByEmailMessages",
+        "summary": "获取用户消息",
+        "description": "分页查询指定用户的所有 Gotify 消息。需要管理员认证。",
+        "tags": [
+          "管理员"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/admin/blacklist": {
+      "get": {
+        "parameters": [
+          {
+            "description": "页码（从 1 开始）",
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "page",
+            "required": false
+          },
+          {
+            "description": "每页数量",
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          }
+        ],
+        "operationId": "getApiAdminBlacklist",
+        "summary": "查看黑名单列表",
+        "description": "分页查询所有被禁止的邮箱。需要管理员认证。",
+        "tags": [
+          "管理员"
+        ],
+        "responses": {
+          "200": {}
+        }
+      },
+      "post": {
+        "parameters": [],
+        "operationId": "postApiAdminBlacklist",
+        "summary": "手动添加邮箱到黑名单",
+        "description": "直接将邮箱加入黑名单，用于预防性封禁。需要管理员认证。",
+        "tags": [
+          "管理员"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "reason"
+                ],
+                "properties": {
+                  "email": {
+                    "description": "邮箱地址",
+                    "format": "email",
+                    "type": "string"
+                  },
+                  "reason": {
+                    "description": "封禁原因",
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "reason"
+                ],
+                "properties": {
+                  "email": {
+                    "description": "邮箱地址",
+                    "format": "email",
+                    "type": "string"
+                  },
+                  "reason": {
+                    "description": "封禁原因",
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "text/plain": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "reason"
+                ],
+                "properties": {
+                  "email": {
+                    "description": "邮箱地址",
+                    "format": "email",
+                    "type": "string"
+                  },
+                  "reason": {
+                    "description": "封禁原因",
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/api/admin/blacklist/{email}": {
+      "delete": {
+        "parameters": [
+          {
+            "description": "邮箱地址",
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "email",
+            "required": true
+          }
+        ],
+        "operationId": "deleteApiAdminBlacklistByEmail",
+        "summary": "从黑名单移除邮箱",
+        "description": "将邮箱从黑名单中移除，允许该邮箱重新注册。需要管理员认证。",
+        "tags": [
+          "管理员"
+        ],
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "operationId": "getIndex",
+        "responses": {
+          "200": {}
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {}
+  }
+}

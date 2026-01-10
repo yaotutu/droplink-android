@@ -1,0 +1,36 @@
+<resources>
+    <string name="app_name">droplink</string>
+
+    <!-- 登录页面 -->
+    <string name="login_welcome_title">欢迎来到 Droplink</string>
+    <string name="login_welcome_subtitle">输入邮箱，我们将发送验证码</string>
+    <string name="login_email_label">邮箱</string>
+    <string name="login_verification_code_label">验证码</string>
+    <string name="login_send_code">发送验证码</string>
+    <string name="login_resend_code">重新发送</string>
+    <string name="login_countdown">%d秒后重试</string>
+    <string name="login_button">登录 / 注册</string>
+    <string name="login_close">关闭</string>
+
+    <!-- 验证错误信息 -->
+    <string name="error_email_empty">邮箱不能为空</string>
+    <string name="error_email_invalid">邮箱格式不正确</string>
+    <string name="error_verification_code_empty">验证码不能为空</string>
+    <string name="error_verification_code_invalid">验证码必须是6位数字</string>
+    <string name="error_verification_code_wrong">验证码错误或已过期</string>
+    <string name="error_send_code_failed">发送验证码失败</string>
+
+    <!-- 首页 -->
+    <string name="home_welcome">欢迎, %s!</string>
+    <string name="home_subtitle">这是一个现代化的 Android 应用</string>
+    <string name="home_profile_card_title">个人中心</string>
+    <string name="home_profile_card_desc">查看和管理您的个人信息</string>
+    <string name="home_logout">退出登录</string>
+
+    <!-- 个人中心 -->
+    <string name="profile_title">个人中心</string>
+    <string name="profile_back">返回</string>
+    <string name="profile_avatar">用户头像</string>
+    <string name="profile_label_id">用户 ID</string>
+    <string name="profile_label_token">认证令牌</string>
+</resources>

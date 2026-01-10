@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+        网络安全配置
+        允许开发环境中的明文 HTTP 通信
+
+        为什么需要：
+        - Android 9 (API 28) 开始默认禁止明文 HTTP
+        - 开发环境需要连接本地服务器 (192.168.x.x, localhost)
+        - 生产环境应该使用 HTTPS
+
+        安全建议：
+        - 仅在开发/测试环境使用 HTTP
+        - 生产环境部署时应该配置为仅允许 HTTPS
+    -->
+
+    <!-- 允许所有域名使用明文 HTTP（开发环境） -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!--
+        生产环境配置示例（注释掉，后期可以启用）：
+
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">192.168.123.100</domain>
+        <domain includeSubdomains="true">111.228.1.24</domain>
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+    </domain-config>
+    -->
+</network-security-config>
