@@ -21,13 +21,16 @@ jobs:
           java-version: "17"
           cache: gradle
 
+      - name: Verify Java
+        run: java -version
+
       - name: Build release APK
         env:
           KEYSTORE_FILE: ${{ secrets.KEYSTORE_FILE }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleRelease
+        run: ./gradlew -Dorg.gradle.java.home=$JAVA_HOME assembleRelease
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
