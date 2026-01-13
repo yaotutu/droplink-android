@@ -16,8 +16,10 @@ android {
         applicationId = "top.yaotutu.droplink"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        // 版本号管理：优先从环境变量读取（CI/CD），否则使用默认值（本地开发）
+        // GitHub Actions 会通过环境变量传递动态版本号
+        versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1
+        versionName = System.getenv("VERSION_NAME") ?: "1.0.0-local"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

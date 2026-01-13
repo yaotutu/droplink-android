@@ -1,0 +1,92 @@
+name: Android Dev Build
+
+on:
+  # 监听 dev 分支的推送
+  push:
+    branches:
+      - dev
+
+  # 允许手动触发
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: 构建 Dev 版本
+    runs-on: ubuntu-latest
+
+    steps:
+      # 检出代码
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      # 设置 JDK 11 环境
+      - name: 设置 JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: gradle
+
+      # 授予 gradlew 执行权限
+      - name: 授予 Gradle 执行权限
+        run: chmod +x gradlew
+
+      # 缓存 Gradle 依赖
+      - name: 缓存 Gradle 包
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # 计算版本号
+      # 格式：0.1.x（x 为 GitHub run_number）
+      # 示例：第 1 次构建 -> 0.1.1，第 50 次构建 -> 0.1.50
+      - name: 设置版本号
+        id: version
+        run: |
+          VERSION_NAME="0.1.${{ github.run_number }}"
+          VERSION_CODE=${{ github.run_number }}
+          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
+          echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
+          echo "📦 版本号: $VERSION_NAME (versionCode: $VERSION_CODE)"
+
+      # 运行单元测试
+      - name: 运行单元测试
+        run: ./gradlew test
+
+      # 构建 Debug APK（带版本号）
+      - name: 构建 Debug APK
+        run: ./gradlew assembleDebug
+        env:
+          VERSION_NAME: ${{ env.VERSION_NAME }}
+          VERSION_CODE: ${{ env.VERSION_CODE }}
+
+      # 重命名 APK 文件（包含版本号）
+      - name: 重命名 APK
+        run: |
+          mkdir -p output
+          cp app/build/outputs/apk/debug/app-debug.apk output/droplink-dev-${{ env.VERSION_NAME }}.apk
+          echo "✅ APK 已重命名为: droplink-dev-${{ env.VERSION_NAME }}.apk"
+
+      # 上传 APK 到 GitHub Artifacts
+      - name: 上传 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: droplink-dev-${{ env.VERSION_NAME }}
+          path: output/droplink-dev-${{ env.VERSION_NAME }}.apk
+          retention-days: 30
+
+      # 输出构建信息
+      - name: 构建信息摘要
+        run: |
+          echo "## 🚀 Dev 构建成功" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **版本号**: ${{ env.VERSION_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **版本代码**: ${{ env.VERSION_CODE }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **分支**: dev" >> $GITHUB_STEP_SUMMARY
+          echo "- **提交**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **构建时间**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
