@@ -10,6 +10,7 @@ import top.yaotutu.droplink.data.network.RetrofitClient
 import top.yaotutu.droplink.data.network.dto.request.SendCodeRequest
 import top.yaotutu.droplink.data.network.dto.request.VerifyRequest
 import top.yaotutu.droplink.data.network.error.ErrorHandler
+import top.yaotutu.droplink.data.settings.AppSettings
 
 /**
  * 认证仓库实现类
@@ -100,6 +101,104 @@ class AuthRepositoryImpl(
             val networkException = ErrorHandler.handleException(e)
             val errorMessage = ErrorHandler.getDisplayMessage(networkException)
             Log.e(TAG, "验证失败: $errorMessage", networkException)
+            Result.failure(Exception(errorMessage, networkException))
+        }
+    }
+
+    // === 自建服务器模式方法实现 ===
+
+    override fun validateGotifyServerUrl(url: String): ValidationResult {
+        val trimmedUrl = url.trim()
+
+        return when {
+            trimmedUrl.isEmpty() -> ValidationResult(false, "服务器地址不能为空")
+            !isValidUrlFormat(trimmedUrl) -> ValidationResult(false, "服务器地址格式不正确，需以 http:// 或 https:// 开头")
+            else -> ValidationResult(true)
+        }
+    }
+
+    /**
+     * 验证 URL 格式（支持 http 和 https）
+     *
+     * React 对标：
+     * - const isValidUrl = (url) => /^https?:\/\/[\w\-.]+(?::\d+)?(?:\/.*)?$/.test(url)
+     */
+    private fun isValidUrlFormat(url: String): Boolean {
+        val urlRegex = Regex("^https?://[\\w\\-.]+(?::\\d+)?(?:/.*)?$")
+        return urlRegex.matches(url)
+    }
+
+    override fun validateToken(token: String): ValidationResult {
+        return when {
+            token.isEmpty() -> ValidationResult(false, "Token 不能为空")
+            token.length < 8 -> ValidationResult(false, "Token 格式不正确（至少8位）")
+            else -> ValidationResult(true)
+        }
+    }
+
+    override suspend fun verifySelfHostedTokens(
+        gotifyServerUrl: String,
+        appToken: String,
+        clientToken: String
+    ): Result<User> {
+        return try {
+            // 1. 获取 AppSettings 实例并保存原服务器地址（用于回滚）
+            val appSettings = AppSettings.getInstance(context)
+            val originalGotifyUrl = appSettings.getGotifyServerUrl()
+
+            Log.d(TAG, "开始验证自建服务器: $gotifyServerUrl")
+
+            // 2. 临时设置 Gotify 服务器地址（不持久化，验证通过后再保存）
+            appSettings.setGotifyServerUrl(gotifyServerUrl)
+            RetrofitClient.resetInstance()
+
+            // 3. 创建 Gotify API 服务
+            val gotifyApiService = RetrofitClient.getInstance(context).getGotifyApiService()
+
+            try {
+                // 4. 调用 GET /current/user?token={clientToken} 验证 clientToken
+                val userResponse = gotifyApiService.getCurrentUser(clientToken)
+
+                // 5. 验证成功，创建 User 对象
+                val user = User(
+                    id = userResponse.name ?: "self-hosted-user",
+                    email = "self-hosted@local",  // 默认邮箱（自建服务器模式）
+                    username = userResponse.name ?: "Self-Hosted User",
+                    token = appToken  // 保存 appToken（用于发送消息）
+                )
+
+                // 6. 持久化保存配置
+                appSettings.setGotifyServerUrl(gotifyServerUrl)
+                tokenManager.saveTokens(
+                    appToken = appToken,
+                    clientToken = clientToken
+                )
+                sessionManager.saveUserSession(user)
+
+                Log.d(TAG, "自建服务器验证成功: ${user.username}")
+                Result.success(user)
+
+            } catch (e: Exception) {
+                // 验证失败，回滚服务器地址
+                appSettings.setGotifyServerUrl(originalGotifyUrl)
+                RetrofitClient.resetInstance()
+                throw e
+            }
+
+        } catch (e: Exception) {
+            val networkException = ErrorHandler.handleException(e)
+
+            // 根据异常类型提供友好的错误信息
+            val errorMessage = when {
+                networkException is java.net.UnknownHostException -> "无法连接到服务器，请检查地址是否正确"
+                networkException is javax.net.ssl.SSLException -> "SSL 证书验证失败"
+                networkException is java.net.SocketTimeoutException -> "连接超时，请检查网络或服务器状态"
+                networkException.message?.contains("401") == true -> "Token 验证失败，请检查 clientToken 是否正确"
+                networkException.message?.contains("404") == true -> "服务器接口不存在，请确认 Gotify 服务器版本"
+                else -> "验证失败: ${ErrorHandler.getDisplayMessage(networkException)}"
+            }
+
+            Log.e(TAG, "自建服务器验证失败: $errorMessage", networkException)
             Result.failure(Exception(errorMessage, networkException))
         }
     }

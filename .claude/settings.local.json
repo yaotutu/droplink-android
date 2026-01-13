@@ -13,7 +13,8 @@
       "WebSearch",
       "WebFetch(domain:gotify.net)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "mcp__chrome-devtools__list_pages"
+      "mcp__chrome-devtools__list_pages",
+      "Bash(git -C /Users/yaotutu/Desktop/code/droplink/droplink-android log --oneline -15)"
     ]
   },
   "outputStyle": "Learning"

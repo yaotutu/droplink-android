@@ -7,6 +7,7 @@ import retrofit2.http.Query
 import top.yaotutu.droplink.data.network.dto.request.GotifyMessageRequest
 import top.yaotutu.droplink.data.network.dto.response.GotifyGetMessagesResponse
 import top.yaotutu.droplink.data.network.dto.response.GotifyMessageResponse
+import top.yaotutu.droplink.data.network.dto.response.GotifyUserResponse
 
 /**
  * Gotify API 服务接口
@@ -18,6 +19,7 @@ import top.yaotutu.droplink.data.network.dto.response.GotifyMessageResponse
  * 核心功能：
  * - 发送消息到 Gotify 服务器
  * - 支持通知推送到其他设备
+ * - 验证 Token 有效性（新增）
  *
  * API 文档：https://gotify.net/docs/msgextras
  */
@@ -102,4 +104,35 @@ interface GotifyApiService {
         @Query("limit") limit: Int = 100,
         @Query("since") since: Long? = null
     ): GotifyGetMessagesResponse
+
+    /**
+     * 获取当前用户信息（用于验证 token）
+     *
+     * GET /current/user?token={clientToken}
+     *
+     * @param token Client Token（用于认证，验证 token 的有效性）
+     * @return 当前用户信息
+     *
+     * React 概念对标：
+     * - const getCurrentUser = (token) => axios.get('/current/user', { params: { token } })
+     *
+     * 使用场景：
+     * - 自建服务器登录时验证用户提供的 clientToken 是否有效
+     * - 如果验证成功，使用返回的用户名创建 User 对象
+     *
+     * 使用示例：
+     * ```kotlin
+     * try {
+     *     val userResponse = apiService.getCurrentUser(token = "CNfL5mCmRXBb8Jo")
+     *     val username = userResponse.name ?: "Self-Hosted User"
+     *     // 创建 User 对象
+     * } catch (e: Exception) {
+     *     // Token 无效或网络错误
+     * }
+     * ```
+     */
+    @GET("current/user")
+    suspend fun getCurrentUser(
+        @Query("token") token: String
+    ): GotifyUserResponse
 }

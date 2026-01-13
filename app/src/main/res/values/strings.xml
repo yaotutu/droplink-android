@@ -20,6 +20,23 @@
     <string name="error_verification_code_wrong">验证码错误或已过期</string>
     <string name="error_send_code_failed">发送验证码失败</string>
 
+    <!-- 自建服务器登录 -->
+    <string name="login_mode_official">官方服务器</string>
+    <string name="login_mode_self_hosted">自建服务器</string>
+    <string name="login_gotify_server_label">Gotify 服务器地址</string>
+    <string name="login_app_token_label">App Token</string>
+    <string name="login_client_token_label">Client Token</string>
+    <string name="login_self_hosted_hint">请在 Gotify 服务器中创建应用获取 Token</string>
+
+    <!-- 自建服务器验证错误 -->
+    <string name="error_gotify_url_empty">服务器地址不能为空</string>
+    <string name="error_gotify_url_invalid">服务器地址格式不正确，需以 http:// 或 https:// 开头</string>
+    <string name="error_app_token_empty">App Token 不能为空</string>
+    <string name="error_app_token_invalid">Token 格式不正确（至少8位）</string>
+    <string name="error_client_token_empty">Client Token 不能为空</string>
+    <string name="error_client_token_invalid">Token 格式不正确（至少8位）</string>
+    <string name="error_token_verification_failed">Token 验证失败，请检查是否正确</string>
+
     <!-- 首页 -->
     <string name="home_welcome">欢迎, %s!</string>
     <string name="home_subtitle">这是一个现代化的 Android 应用</string>

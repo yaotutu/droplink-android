@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import top.yaotutu.droplink.data.model.LoginMode
 import top.yaotutu.droplink.data.repository.AuthRepository
 import top.yaotutu.droplink.data.settings.AppSettings
 
@@ -199,6 +200,127 @@ class LoginViewModel(
      */
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+
+    // === 自建服务器模式方法 ===
+
+    /**
+     * 切换登录模式
+     *
+     * React 对标：
+     * - const switchMode = (mode) => setLoginMode(mode)
+     */
+    fun switchLoginMode(mode: LoginMode) {
+        _uiState.value = _uiState.value.copy(
+            loginMode = mode,
+            errorMessage = null,
+            // 清空所有错误提示
+            emailError = null,
+            verificationCodeError = null,
+            serverAddressError = null,
+            gotifyServerUrlError = null,
+            appTokenError = null,
+            clientTokenError = null
+        )
+    }
+
+    /**
+     * 更新 Gotify 服务器地址输入
+     */
+    fun onGotifyServerUrlChange(url: String) {
+        _uiState.value = _uiState.value.copy(
+            gotifyServerUrl = url,
+            gotifyServerUrlError = null,
+            errorMessage = null
+        )
+    }
+
+    /**
+     * 更新自建服务器 appToken 输入
+     */
+    fun onSelfHostedAppTokenChange(token: String) {
+        _uiState.value = _uiState.value.copy(
+            selfHostedAppToken = token,
+            appTokenError = null,
+            errorMessage = null
+        )
+    }
+
+    /**
+     * 更新自建服务器 clientToken 输入
+     */
+    fun onSelfHostedClientTokenChange(token: String) {
+        _uiState.value = _uiState.value.copy(
+            selfHostedClientToken = token,
+            clientTokenError = null,
+            errorMessage = null
+        )
+    }
+
+    /**
+     * 自建服务器登录
+     *
+     * React 对标：
+     * - async function loginWithSelfHosted() { ... }
+     *
+     * 流程：
+     * 1. 验证 3 个输入字段（Gotify 地址、appToken、clientToken）
+     * 2. 调用 authRepository.verifySelfHostedTokens()
+     * 3. 如果成功：设置 isLoginSuccess = true
+     * 4. 如果失败：显示错误信息
+     */
+    fun loginWithSelfHosted() {
+        val gotifyUrl = _uiState.value.gotifyServerUrl.trim()
+        val appToken = _uiState.value.selfHostedAppToken.trim()
+        val clientToken = _uiState.value.selfHostedClientToken.trim()
+
+        // 1. 验证 Gotify 服务器地址
+        val urlValidation = authRepository.validateGotifyServerUrl(gotifyUrl)
+        if (!urlValidation.isValid) {
+            _uiState.value = _uiState.value.copy(
+                gotifyServerUrlError = urlValidation.errorMessage
+            )
+            return
+        }
+
+        // 2. 验证 appToken
+        val appTokenValidation = authRepository.validateToken(appToken)
+        if (!appTokenValidation.isValid) {
+            _uiState.value = _uiState.value.copy(
+                appTokenError = appTokenValidation.errorMessage
+            )
+            return
+        }
+
+        // 3. 验证 clientToken
+        val clientTokenValidation = authRepository.validateToken(clientToken)
+        if (!clientTokenValidation.isValid) {
+            _uiState.value = _uiState.value.copy(
+                clientTokenError = clientTokenValidation.errorMessage
+            )
+            return
+        }
+
+        // 4. 开始验证
+        _uiState.value = _uiState.value.copy(isLoading = true)
+
+        viewModelScope.launch {
+            authRepository.verifySelfHostedTokens(gotifyUrl, appToken, clientToken)
+                .onSuccess { user ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isLoginSuccess = true,
+                        user = user,
+                        errorMessage = null
+                    )
+                }
+                .onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = exception.message
+                    )
+                }
+        }
     }
 
     override fun onCleared() {

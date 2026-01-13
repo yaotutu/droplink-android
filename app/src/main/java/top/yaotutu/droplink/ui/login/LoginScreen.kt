@@ -43,6 +43,10 @@ import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -64,6 +68,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import top.yaotutu.droplink.R
+import top.yaotutu.droplink.data.model.LoginMode
 
 /**
  * 登录页面 Composable（验证码登录）
@@ -95,7 +100,13 @@ fun LoginScreen(
     LaunchedEffect(uiState.isLoginSuccess) {
         val user = uiState.user
         if (uiState.isLoginSuccess && user != null) {
-            onLoginSuccess(user.email)
+            // 自建服务器模式使用 username，官方服务器使用 email
+            val displayName = if (uiState.loginMode == LoginMode.SELF_HOSTED) {
+                user.username
+            } else {
+                user.email
+            }
+            onLoginSuccess(displayName)
         }
     }
 
@@ -124,12 +135,19 @@ fun LoginScreen(
         // 登录表单
         LoginForm(
             uiState = uiState,
+            // 官方服务器模式回调
             onEmailChange = viewModel::onEmailChange,
             onVerificationCodeChange = viewModel::onVerificationCodeChange,
             onServerAddressChange = viewModel::onServerAddressChange,
             onSendCodeClick = viewModel::sendVerificationCode,
             onLoginClick = viewModel::verify,
-            onErrorDismiss = viewModel::clearError
+            onErrorDismiss = viewModel::clearError,
+            // 自建服务器模式回调
+            onLoginModeChange = viewModel::switchLoginMode,
+            onGotifyServerUrlChange = viewModel::onGotifyServerUrlChange,
+            onSelfHostedAppTokenChange = viewModel::onSelfHostedAppTokenChange,
+            onSelfHostedClientTokenChange = viewModel::onSelfHostedClientTokenChange,
+            onSelfHostedLoginClick = viewModel::loginWithSelfHosted
         )
 
         // Snackbar 提示
@@ -155,12 +173,19 @@ fun LoginScreen(
 @Composable
 fun LoginForm(
     uiState: LoginUiState,
+    // === 官方服务器模式回调 ===
     onEmailChange: (String) -> Unit,
     onVerificationCodeChange: (String) -> Unit,
     onServerAddressChange: (String) -> Unit,
     onSendCodeClick: () -> Unit,
     onLoginClick: () -> Unit,
-    onErrorDismiss: () -> Unit
+    onErrorDismiss: () -> Unit,
+    // === 自建服务器模式回调 ===
+    onLoginModeChange: (LoginMode) -> Unit,
+    onGotifyServerUrlChange: (String) -> Unit,
+    onSelfHostedAppTokenChange: (String) -> Unit,
+    onSelfHostedClientTokenChange: (String) -> Unit,
+    onSelfHostedLoginClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -210,6 +235,19 @@ fun LoginForm(
 
         Spacer(modifier = Modifier.height(32.dp))
 
+        // === 登录模式 Tab 切换 ===
+        LoginModeTabs(
+            selectedMode = uiState.loginMode,
+            onModeSelected = onLoginModeChange,
+            enabled = !uiState.isLoading
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // === 条件渲染：根据登录模式显示不同的表单 ===
+        when (uiState.loginMode) {
+            LoginMode.OFFICIAL -> {
+                // === 官方服务器登录表单 ===
         // === 登录表单卡片 ===
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -372,7 +410,223 @@ fun LoginForm(
                 )
             }
         }
+            }
+            LoginMode.SELF_HOSTED -> {
+                // === 自建服务器登录表单 ===
+                SelfHostedLoginForm(
+                    uiState = uiState,
+                    onGotifyServerUrlChange = onGotifyServerUrlChange,
+                    onAppTokenChange = onSelfHostedAppTokenChange,
+                    onClientTokenChange = onSelfHostedClientTokenChange,
+                    onLoginClick = onSelfHostedLoginClick
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+/**
+ * 登录模式 Tab 切换器
+ *
+ * React 对标：
+ * - <Tabs> 组件
+ * - selectedMode ≈ activeTab state
+ */
+@Composable
+fun LoginModeTabs(
+    selectedMode: LoginMode,
+    onModeSelected: (LoginMode) -> Unit,
+    enabled: Boolean = true
+) {
+    val tabs = listOf(
+        LoginMode.OFFICIAL to "官方服务器",
+        LoginMode.SELF_HOSTED to "自建服务器"
+    )
+
+    TabRow(
+        selectedTabIndex = if (selectedMode == LoginMode.OFFICIAL) 0 else 1,
+        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        indicator = { tabPositions ->
+            TabRowDefaults.Indicator(
+                Modifier.tabIndicatorOffset(tabPositions[if (selectedMode == LoginMode.OFFICIAL) 0 else 1]),
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    ) {
+        tabs.forEachIndexed { index, (mode, title) ->
+            Tab(
+                selected = selectedMode == mode,
+                onClick = { if (enabled) onModeSelected(mode) },
+                enabled = enabled,
+                text = {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = if (selectedMode == mode) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+            )
+        }
+    }
+}
+
+/**
+ * 自建服务器登录表单
+ *
+ * React 对标：
+ * - 功能组件 SelfHostedLoginForm
+ * - 纯 UI 组件，无业务逻辑
+ */
+@Composable
+fun SelfHostedLoginForm(
+    uiState: LoginUiState,
+    onGotifyServerUrlChange: (String) -> Unit,
+    onAppTokenChange: (String) -> Unit,
+    onClientTokenChange: (String) -> Unit,
+    onLoginClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp)
+        ) {
+            // === 1. Gotify 服务器地址输入框 ===
+            OutlinedTextField(
+                value = uiState.gotifyServerUrl,
+                onValueChange = onGotifyServerUrlChange,
+                label = { Text("Gotify 服务器地址") },
+                placeholder = { Text("http://192.168.1.100:8080") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.Lock,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                isError = uiState.gotifyServerUrlError != null,
+                supportingText = uiState.gotifyServerUrlError?.let { { Text(it) } },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !uiState.isLoading,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // === 2. App Token 输入框 ===
+            OutlinedTextField(
+                value = uiState.selfHostedAppToken,
+                onValueChange = onAppTokenChange,
+                label = { Text("App Token") },
+                placeholder = { Text("Ah17tk7rkgdueDR") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Outlined.Lock,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                isError = uiState.appTokenError != null,
+                supportingText = uiState.appTokenError?.let { { Text(it) } },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !uiState.isLoading,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // === 3. Client Token 输入框 ===
+            OutlinedTextField(
+                value = uiState.selfHostedClientToken,
+                onValueChange = onClientTokenChange,
+                label = { Text("Client Token") },
+                placeholder = { Text("CNfL5mCmRXBb8Jo") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Outlined.Lock,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                isError = uiState.clientTokenError != null,
+                supportingText = uiState.clientTokenError?.let { { Text(it) } },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !uiState.isLoading,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                )
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // === 提示文本 ===
+            Text(
+                text = "请在 Gotify 服务器中创建应用获取 Token",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+        }
+    }
+
+    Spacer(modifier = Modifier.height(24.dp))
+
+    // === 登录按钮 ===
+    Button(
+        onClick = onLoginClick,
+        enabled = !uiState.isLoading &&
+                uiState.gotifyServerUrl.isNotEmpty() &&
+                uiState.selfHostedAppToken.isNotEmpty() &&
+                uiState.selfHostedClientToken.isNotEmpty(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        ),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 4.dp,
+            pressedElevation = 8.dp
+        )
+    ) {
+        if (uiState.isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                color = MaterialTheme.colorScheme.onPrimary,
+                strokeWidth = 3.dp
+            )
+        } else {
+            Text(
+                text = "登录",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }
