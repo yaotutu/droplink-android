@@ -53,9 +53,6 @@ class MainActivity : ComponentActivity() {
         SessionManager.getInstance(applicationContext)
     }
 
-    // 分享 ViewModel（需要在 Activity 级别持有，以便在多次接收分享时复用）
-    private var shareViewModel: ShareViewModel? = null
-
     override fun onCreate(savedInstanceState: Bundle?) {
         // 根据 Intent 动态设置主题（必须在 super.onCreate 之前）
         // 如果是分享 Intent，使用透明主题，用户不会看到 Activity
@@ -97,17 +94,10 @@ class MainActivity : ComponentActivity() {
                     // 创建导航控制器
                     val navController = rememberNavController()
 
-                    // 创建或获取 ShareViewModel（使用 Factory）
-                    val viewModel = viewModel<ShareViewModel>(
-                        factory = ShareViewModelFactory(applicationContext)
-                    )
-                    shareViewModel = viewModel
-
                     // 设置应用导航图（根据登录状态决定起始页面）
                     AppNavGraph(
                         navController = navController,
                         sessionManager = sessionManager,
-                        shareViewModel = viewModel,
                         startDestination = null  // 正常模式不自动导航到分享页面
                     )
                 }

@@ -1,5 +1,11 @@
 package top.yaotutu.droplink.ui.messages
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,12 +21,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -28,63 +42,195 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 
 /**
- * 消息列表页面 - 现代高密度设计
+ * 消息列表页面 - 基于 Droplink 消息格式
+ *
+ * React 概念对标：
+ * - const MessagePage = () => { const { state, loadMessages, refresh } = useMessages(); useEffect(() => { loadMessages(); }, []); ... }
  *
  * 设计理念：
- * - 高信息密度：紧凑间距（6dp），更多可见内容
- * - 扁平化：minimal elevation，依靠颜色和线条区分
- * - 强对比度：未读消息用左侧蓝条+粗体+深色背景
- * - 彩色头像：Material 色彩系统，提升视觉丰富度
+ * - 关注 extras.droplink 数据：sender、content、actions、timestamp、tags
+ * - 弱化 Gotify 原生字段：title 和 message
+ * - 兼容处理无 extras.droplink 的普通 Gotify 消息
  *
- * 参考设计：Telegram + Gmail 的混合风格
+ * 状态处理：
+ * - Loading: 首次加载，显示全屏加载指示器
+ * - Success: 显示消息列表，支持下拉刷新和滚动加载更多
+ * - Refreshing: 下拉刷新中，保留当前列表
+ * - LoadingMore: 加载更多中，显示底部加载指示器
+ * - Error: 错误状态，如果有之前的消息则保留显示
  *
  * @param modifier 修饰符
- * @param onMessageClick 消息点击回调
- * @param onRefresh 下拉刷新回调
+ * @param viewModel 消息列表 ViewModel
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessageScreen(
     modifier: Modifier = Modifier,
-    onMessageClick: (Message) -> Unit = {},
-    onRefresh: () -> Unit = {}
+    viewModel: MessageViewModel = viewModel(
+        factory = MessageViewModelFactory(LocalContext.current)
+    )
 ) {
-    val messages = getSampleMessages()
+    val uiState by viewModel.uiState.collectAsState()
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
+    // 首次加载：当状态为 Idle 时自动触发加载
+    LaunchedEffect(Unit) {
+        if (uiState is MessageUiState.Idle) {
+            viewModel.loadMessages()
+        }
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        when (val state = uiState) {
+            is MessageUiState.Loading -> {
+                // 加载骨架屏（Shimmer 效果）
+                LoadingSkeleton()
+            }
+            is MessageUiState.Success -> {
+                MessageList(
+                    messages = state.messages,
+                    hasMore = state.hasMore,
+                    onRefresh = { viewModel.refreshMessages() },
+                    onLoadMore = { viewModel.loadMoreMessages() }
+                )
+            }
+            is MessageUiState.Refreshing -> {
+                MessageList(
+                    messages = state.currentMessages,
+                    isRefreshing = true,
+                    onRefresh = { /* 已在刷新中 */ }
+                )
+            }
+            is MessageUiState.LoadingMore -> {
+                MessageList(
+                    messages = state.currentMessages,
+                    isLoadingMore = true
+                )
+            }
+            is MessageUiState.Error -> {
+                if (state.previousMessages.isNullOrEmpty()) {
+                    // 首次加载失败 - 显示错误页面
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Text(text = state.message)
+                            Button(onClick = { viewModel.loadMessages() }) {
+                                Text("重试")
+                            }
+                        }
+                    }
+                } else {
+                    // 刷新失败 - 保留之前的列表
+                    MessageList(
+                        messages = state.previousMessages,
+                        onRefresh = { viewModel.refreshMessages() }
+                    )
+                }
+            }
+            else -> {}
+        }
+    }
+}
+
+/**
+ * 消息列表组件
+ *
+ * React 概念对标：
+ * - const MessageList = ({ messages, hasMore, isRefreshing, onRefresh, onLoadMore }) => { ... }
+ *
+ * 功能：
+ * - 下拉刷新（PullToRefreshBox）
+ * - 滚动加载更多（监听滚动位置，接近底部时触发）
+ * - 空状态显示
+ * - 加载更多指示器
+ *
+ * @param messages 消息列表
+ * @param hasMore 是否有更多数据
+ * @param isRefreshing 是否正在刷新
+ * @param isLoadingMore 是否正在加载更多
+ * @param onRefresh 下拉刷新回调
+ * @param onLoadMore 加载更多回调
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MessageList(
+    messages: List<MessageItem>,
+    hasMore: Boolean = false,
+    isRefreshing: Boolean = false,
+    isLoadingMore: Boolean = false,
+    onRefresh: () -> Unit = {},
+    onLoadMore: () -> Unit = {}
+) {
+    val listState = rememberLazyListState()
+
+    // 监听滚动，触发加载更多
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
+            .collect { lastVisibleIndex ->
+                if (hasMore && !isLoadingMore && lastVisibleIndex != null) {
+                    val totalItems = listState.layoutInfo.totalItemsCount
+                    // 当滚动到倒数第 5 个时触发加载更多
+                    if (lastVisibleIndex >= totalItems - 5) {
+                        onLoadMore()
+                    }
+                }
+            }
+    }
+
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = Modifier.fillMaxSize()
     ) {
-        PullToRefreshBox(
-            isRefreshing = false,
-            onRefresh = onRefresh,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            if (messages.isEmpty()) {
-                EmptyMessageState()
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(1.dp) // 极小间距
-                ) {
-                    items(messages) { message ->
-                        MessageCard(
-                            message = message,
-                            onClick = { onMessageClick(message) }
-                        )
+        if (messages.isEmpty() && !isRefreshing) {
+            // 空状态
+            EmptyMessageState()
+        } else {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(1.dp)
+            ) {
+                items(
+                    items = messages,
+                    key = { it.id }
+                ) { message ->
+                    MessageCard(message = message)
+                }
+
+                // 加载更多指示器
+                if (isLoadingMore) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
                     }
                 }
             }
@@ -93,169 +239,88 @@ fun MessageScreen(
 }
 
 /**
- * 消息卡片 - 现代扁平化设计
+ * 消息卡片 - 极简 key:value 展示
  *
- * 关键特性：
- * - 左侧蓝色指示器（4dp宽）表示未读
- * - 扁平化（0dp elevation）
- * - 紧凑布局（12dp padding）
- * - 彩色圆形头像
- * - 时间固定在右上角
+ * 设计原则：
+ * - 只展示 extras 字段的原始数据
+ * - key:value 格式，简洁直观
+ * - 无额外装饰，纯数据展示
+ *
+ * @param message 消息数据
  */
 @Composable
 fun MessageCard(
-    message: Message,
-    onClick: () -> Unit
+    message: MessageItem,
+    onClick: () -> Unit = {}
 ) {
+    // 格式化 timestamp 为可读格式
+    val formattedTimestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        .format(Date(message.timestamp))
+
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(0.dp), // 完全扁平
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 0.dp
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(4.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
         ),
         colors = CardDefaults.cardColors(
-            containerColor = if (message.isRead) {
-                MaterialTheme.colorScheme.surface
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-            }
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth()
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            // 未读指示器（左侧蓝条）
-            if (!message.isRead) {
-                Box(
-                    modifier = Modifier
-                        .width(4.dp)
-                        .height(80.dp)
-                        .background(MaterialTheme.colorScheme.primary)
-                )
-            } else {
-                Spacer(modifier = Modifier.width(4.dp))
+            // 显示所有字段，key:value 格式
+            KeyValueRow("id", message.id)
+            KeyValueRow("sender", message.sender)
+            KeyValueRow("contentType", message.contentType)
+            KeyValueRow("contentValue", message.contentValue)
+            KeyValueRow("timestamp", formattedTimestamp)
+            KeyValueRow("displayTime", message.displayTime)
+
+            if (message.tags.isNotEmpty()) {
+                KeyValueRow("tags", message.tags.joinToString(", "))
             }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // 发送者头像（彩色背景）
-                Surface(
-                    modifier = Modifier.size(48.dp),
-                    shape = CircleShape,
-                    color = getAvatarColor(message.id)
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (message.senderAvatar.isNotEmpty()) {
-                            AsyncImage(
-                                model = message.senderAvatar,
-                                contentDescription = "发送者头像",
-                                modifier = Modifier.size(48.dp)
-                            )
-                        } else {
-                            // 显示首字母
-                            Text(
-                                text = message.senderName.take(1).uppercase(),
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                // 消息内容
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    // 第一行：发送者名 + 时间
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = message.senderName,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = if (message.isRead) {
-                                FontWeight.Normal
-                            } else {
-                                FontWeight.Bold
-                            },
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Text(
-                            text = message.time,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (message.isRead) {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            } else {
-                                MaterialTheme.colorScheme.primary
-                            },
-                            fontSize = 12.sp,
-                            fontWeight = if (message.isRead) {
-                                FontWeight.Normal
-                            } else {
-                                FontWeight.SemiBold
-                            }
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    // 标题
-                    Text(
-                        text = message.title,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = if (message.isRead) {
-                            FontWeight.Normal
-                        } else {
-                            FontWeight.SemiBold
-                        },
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    Spacer(modifier = Modifier.height(2.dp))
-
-                    // 内容预览
-                    Text(
-                        text = message.content,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        fontSize = 14.sp
-                    )
-                }
-
-                // 未读圆点（可选，现在用左侧蓝条替代）
-                if (!message.isRead) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary)
-                    )
-                }
+            if (message.actions.isNotEmpty()) {
+                KeyValueRow("actions", message.actions.joinToString(", ") {
+                    "${it.type}${it.target?.let { t -> "($t)" } ?: ""}"
+                })
             }
         }
+    }
+}
+
+/**
+ * Key-Value 行组件
+ *
+ * 简单的 key:value 展示
+ */
+@Composable
+fun KeyValueRow(key: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Start
+    ) {
+        Text(
+            text = "$key: ",
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 
@@ -313,86 +378,135 @@ fun EmptyMessageState() {
 }
 
 /**
- * 根据消息ID生成头像颜色
- * 使用 Material 色彩系统的不同色相
+ * 加载骨架屏 - Shimmer 效果
+ *
+ * React 概念对标：
+ * - const LoadingSkeleton = () => { return <div className="shimmer">{[...].map(() => <Skeleton />)}</div>; }
+ *
+ * UX 最佳实践：
+ * - 显示内容结构的占位符，而不是简单的加载指示器
+ * - 使用 Shimmer 动画提示正在加载
+ * - 动画速度：1000ms（平滑但不会让人觉得卡顿）
+ * - 尊重用户的运动偏好设置（prefers-reduced-motion）
+ *
+ * 设计原则：
+ * - 骨架屏应该反映真实内容的布局
+ * - 使用渐变动画模拟光泽效果
+ * - 颜色应该柔和，不刺眼
  */
-fun getAvatarColor(messageId: String): Color {
-    val colors = listOf(
-        Color(0xFF2563EB), // 蓝色
-        Color(0xFF10B981), // 绿色
-        Color(0xFFF59E0B), // 琥珀色
-        Color(0xFFEF4444), // 红色
-        Color(0xFF8B5CF6), // 紫色
-        Color(0xFF06B6D4), // 青色
-        Color(0xFFEC4899), // 粉色
-        Color(0xFF14B8A6)  // 青绿色
-    )
-    val index = messageId.hashCode() % colors.size
-    return colors[index.coerceAtLeast(0)]
+@Composable
+fun LoadingSkeleton() {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(1.dp)
+    ) {
+        items(5) {
+            MessageCardSkeleton()
+        }
+    }
 }
 
 /**
- * 消息数据类
+ * 消息卡片骨架屏
+ *
+ * 模拟 key:value 格式的简洁布局
  */
-data class Message(
-    val id: String,
-    val senderName: String,
-    val senderAvatar: String,
-    val title: String,
-    val content: String,
-    val time: String,
-    val isRead: Boolean = false
-)
+@Composable
+fun MessageCardSkeleton() {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(4.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+        ),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            // 模拟 6 行 key:value 数据
+            repeat(6) { index ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    // Key 骨架
+                    Box(
+                        modifier = Modifier
+                            .width(80.dp)
+                            .height(14.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .shimmerEffect()
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    // Value 骨架
+                    Box(
+                        modifier = Modifier
+                            .width(if (index % 3 == 0) 150.dp else 120.dp)
+                            .height(14.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .shimmerEffect()
+                    )
+                }
+            }
+        }
+    }
+}
 
 /**
- * 获取示例消息数据
+ * Shimmer 效果 Modifier
+ *
+ * 创建一个从左到右的渐变光泽效果
+ *
+ * React 概念对标：
+ * - 类似 CSS animation: shimmer 1s infinite
+ * - 或使用 react-loading-skeleton 库
+ *
+ * 实现原理：
+ * - 使用 infiniteRepeatable 创建无限循环动画
+ * - 使用 Brush.linearGradient 创建渐变效果
+ * - 通过改变渐变起点实现"光泽移动"效果
  */
-fun getSampleMessages(): List<Message> {
-    return listOf(
-        Message(
-            id = "1",
-            senderName = "系统通知",
-            senderAvatar = "",
-            title = "欢迎使用 Droplink",
-            content = "感谢您注册 Droplink！开始您的文件分享之旅吧。",
-            time = "10:30",
-            isRead = false
+@Composable
+fun Modifier.shimmerEffect(): Modifier {
+    // 创建无限循环动画
+    val transition = rememberInfiniteTransition(label = "shimmer")
+    val translateAnim = transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1000f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = 1000,
+                easing = LinearEasing
+            ),
+            repeatMode = RepeatMode.Restart
         ),
-        Message(
-            id = "2",
-            senderName = "张三",
-            senderAvatar = "",
-            title = "您有一个新的文件分享",
-            content = "张三向您分享了一个文件：项目文档.pdf",
-            time = "昨天",
-            isRead = true
-        ),
-        Message(
-            id = "3",
-            senderName = "系统提醒",
-            senderAvatar = "",
-            title = "存储空间即将用尽",
-            content = "您的存储空间已使用 85%，建议升级套餐或清理文件。",
-            time = "2天前",
-            isRead = true
-        ),
-        Message(
-            id = "4",
-            senderName = "李四",
-            senderAvatar = "",
-            title = "新消息提醒",
-            content = "李四向您发送了一条消息，请及时查看。",
-            time = "3天前",
-            isRead = false
-        ),
-        Message(
-            id = "5",
-            senderName = "王五",
-            senderAvatar = "",
-            title = "文件上传完成",
-            content = "您上传的文件 report.xlsx 已处理完成。",
-            time = "1周前",
-            isRead = true
-        )
+        label = "shimmer_translate"
     )
+
+    // 获取主题颜色
+    val shimmerColors = listOf(
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+    )
+
+    // 创建渐变笔刷
+    val brush = Brush.linearGradient(
+        colors = shimmerColors,
+        start = Offset(translateAnim.value - 200f, translateAnim.value - 200f),
+        end = Offset(translateAnim.value, translateAnim.value)
+    )
+
+    return this.background(brush)
 }

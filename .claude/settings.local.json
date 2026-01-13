@@ -9,7 +9,11 @@
       "Bash(./gradlew:*)",
       "Bash(adb shell am start:*)",
       "Bash(ls:*)",
-      "Bash(adb logcat:*)"
+      "Bash(adb logcat:*)",
+      "WebSearch",
+      "WebFetch(domain:gotify.net)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "mcp__chrome-devtools__list_pages"
     ]
   },
   "outputStyle": "Learning"

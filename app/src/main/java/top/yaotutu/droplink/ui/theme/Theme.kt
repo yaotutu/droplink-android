@@ -157,14 +157,16 @@ fun DroplinkTheme(
         else -> LightColorScheme
     }
 
-    // 获取当前 View 以设置状态栏颜色
+    // 获取当前 View 以设置状态栏图标颜色
     val view = LocalView.current
     if (!view.isInEditMode) {
         // SideEffect：在 Composition 成功后执行副作用
-        // 用于同步状态栏和导航栏颜色
+        // 用于同步状态栏和导航栏的图标颜色
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb()
+
+            // 注意：不再设置 statusBarColor，因为 MainActivity 中使用了 enableEdgeToEdge()
+            // Edge-to-Edge 模式下，状态栏应保持透明，由系统自动处理
 
             // 设置状态栏图标颜色（深色模式用亮色图标，浅色模式用深色图标）
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme

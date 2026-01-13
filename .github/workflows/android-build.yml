@@ -1,0 +1,109 @@
+name: Android CI Build
+
+on:
+  # 当推送到 main 分支时触发
+  push:
+    branches:
+      - main
+    # 当创建 tag 时触发（用于版本发布）
+    tags:
+      - 'v*'
+
+  # 当创建 Pull Request 时触发
+  pull_request:
+    branches:
+      - main
+
+  # 允许手动触发
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: '构建类型'
+        required: true
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+          - release
+          - both
+
+jobs:
+  build:
+    name: 构建 Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      # 检出代码
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      # 设置 JDK 11 环境（项目使用 Java 11）
+      - name: 设置 JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: gradle
+
+      # 授予 gradlew 执行权限
+      - name: 授予 Gradle 执行权限
+        run: chmod +x gradlew
+
+      # 缓存 Gradle 依赖
+      - name: 缓存 Gradle 包
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # 运行测试
+      - name: 运行单元测试
+        run: ./gradlew test
+
+      # 构建 Debug APK
+      - name: 构建 Debug APK
+        if: github.event.inputs.build_type == 'debug' || github.event.inputs.build_type == 'both' || github.event.inputs.build_type == ''
+        run: ./gradlew assembleDebug
+
+      # 构建 Release APK（需要签名配置）
+      - name: 构建 Release APK
+        if: github.event.inputs.build_type == 'release' || github.event.inputs.build_type == 'both' || startsWith(github.ref, 'refs/tags/')
+        run: ./gradlew assembleRelease
+        env:
+          # 从 GitHub Secrets 中读取签名信息
+          KEYSTORE_FILE: ${{ secrets.KEYSTORE_FILE }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      # 上传 Debug APK
+      - name: 上传 Debug APK
+        if: github.event.inputs.build_type == 'debug' || github.event.inputs.build_type == 'both' || github.event.inputs.build_type == ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: droplink-debug-${{ github.sha }}
+          path: app/build/outputs/apk/debug/*.apk
+
+      # 上传 Release APK
+      - name: 上传 Release APK
+        if: github.event.inputs.build_type == 'release' || github.event.inputs.build_type == 'both' || startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: droplink-release-${{ github.sha }}
+          path: app/build/outputs/apk/release/*.apk
+
+      # 创建 GitHub Release（仅当推送 tag 时）
+      - name: 创建 GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/release/*.apk
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

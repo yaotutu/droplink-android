@@ -3,6 +3,7 @@ package top.yaotutu.droplink.ui.share
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -97,7 +98,13 @@ class ShareViewModel(
                         )
                     }
                     else -> {
-                        val fileUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+                        // 修复：使用新的 API（Android 13+）或抑制弃用警告（Android 12-）
+                        val fileUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                        } else {
+                            @Suppress("DEPRECATION")
+                            intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+                        }
                         val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT)
                         SharedData(
                             type = ShareType.SINGLE_FILE,
@@ -110,7 +117,13 @@ class ShareViewModel(
             }
 
             Intent.ACTION_SEND_MULTIPLE -> {
-                val fileUris = intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)
+                // 修复：使用新的 API（Android 13+）或抑制弃用警告（Android 12-）
+                val fileUris = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)
+                }
                 val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT)
                 SharedData(
                     type = ShareType.MULTIPLE_FILES,

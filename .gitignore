@@ -124,3 +124,6 @@ apikey.properties
 *.tmp
 *.temp
 *~.nib
+
+# 签名配置信息文件（敏感信息）
+SIGNING_CONFIG.txt

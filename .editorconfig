@@ -1,0 +1,30 @@
+# EditorConfig 配置文件
+# 用于统一项目的代码风格
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{kt,kts}]
+indent_size = 4
+max_line_length = 120
+# 保留 import 语句，不要自动移除（尤其是 build.gradle.kts 中的 java.util.Base64）
+ij_kotlin_imports_layout = *
+
+[*.xml]
+indent_size = 4
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.{yml,yaml}]
+indent_size = 2
+
+[*.json]
+indent_size = 2

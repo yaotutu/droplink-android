@@ -1,3 +1,6 @@
+import java.io.File
+import java.util.Base64
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -25,6 +28,28 @@ android {
         buildConfigField("String", "API_KEY", "\"your_api_key_here\"")  // 保留原有的 API_KEY
     }
 
+    // 签名配置（用于 Release 构建）
+    signingConfigs {
+        create("release") {
+            // 从环境变量或 local.properties 读取签名信息
+            storeFile = System.getenv("KEYSTORE_FILE")?.let { base64String ->
+                // GitHub Actions 场景：从 Base64 解码密钥文件
+                val keystoreFile = File(layout.buildDirectory.get().asFile, "release.keystore")
+                keystoreFile.parentFile.mkdirs()
+                keystoreFile.writeBytes(Base64.getMimeDecoder().decode(base64String))
+                keystoreFile
+            } ?: run {
+                // 本地开发场景：从项目目录读取（如果存在）
+                val localKeystore = rootProject.file("droplink-release.keystore")
+                if (localKeystore.exists()) localKeystore else null
+            }
+
+            storePassword = System.getenv("KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("KEY_ALIAS")
+            keyPassword = System.getenv("KEY_PASSWORD")
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -32,6 +57,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+
+            // 应用签名配置（仅在签名信息完整时）
+            if (System.getenv("KEYSTORE_PASSWORD") != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     compileOptions {

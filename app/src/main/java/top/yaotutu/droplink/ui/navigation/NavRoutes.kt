@@ -7,5 +7,4 @@ package top.yaotutu.droplink.ui.navigation
 object NavRoutes {
     const val LOGIN = "login"
     const val MAIN = "main"  // 主屏幕（包含消息列表和个人中心）
-    const val SHARE = "share"  // 分享接收页面
 }

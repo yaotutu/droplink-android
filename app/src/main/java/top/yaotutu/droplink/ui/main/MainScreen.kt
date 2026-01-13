@@ -168,7 +168,8 @@ fun MainScreen(
                 )
                 1 -> ProfileScreen(
                     user = user,
-                    onBackClick = onLogout
+                    onBackClick = onLogout,
+                    modifier = Modifier.padding(paddingValues)
                 )
             }
         }
