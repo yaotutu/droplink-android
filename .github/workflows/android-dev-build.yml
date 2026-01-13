@@ -16,35 +16,29 @@ jobs:
 
     steps:
       # 检出代码
-      - name: 检出代码
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # 设置 JDK 11 环境
-      - name: 设置 JDK 11
+      # 设置 JDK 17（参考 android-release.yml）
+      - name: Set up JDK
+        id: setup-java
         uses: actions/setup-java@v4
         with:
-          java-version: '11'
-          distribution: 'temurin'
+          distribution: temurin
+          java-version: "17"
           cache: gradle
 
+      # 验证 Java 环境
+      - name: Verify Java
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME"
+          java -version
+
       # 授予 gradlew 执行权限
-      - name: 授予 Gradle 执行权限
+      - name: Make gradlew executable
         run: chmod +x gradlew
 
-      # 缓存 Gradle 依赖
-      - name: 缓存 Gradle 包
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      # 计算版本号
-      # 格式：0.1.x（x 为 GitHub run_number）
-      # 示例：第 1 次构建 -> 0.1.1，第 50 次构建 -> 0.1.50
+      # 设置版本号（0.1.x 格式）
       - name: 设置版本号
         id: version
         run: |
@@ -55,33 +49,35 @@ jobs:
           echo "📦 版本号: $VERSION_NAME (versionCode: $VERSION_CODE)"
 
       # 运行单元测试
-      - name: 运行单元测试
+      - name: Run tests
         run: ./gradlew test
 
-      # 构建 Debug APK（带版本号）
-      - name: 构建 Debug APK
-        run: ./gradlew assembleDebug
+      # 构建 Debug APK
+      - name: Build debug APK
         env:
           VERSION_NAME: ${{ env.VERSION_NAME }}
           VERSION_CODE: ${{ env.VERSION_CODE }}
+        run: |
+          echo "Using JAVA_HOME=$JAVA_HOME"
+          ./gradlew assembleDebug --stacktrace
 
-      # 重命名 APK 文件（包含版本号）
-      - name: 重命名 APK
+      # 重命名 APK 文件
+      - name: Rename APK
         run: |
           mkdir -p output
           cp app/build/outputs/apk/debug/app-debug.apk output/droplink-dev-${{ env.VERSION_NAME }}.apk
           echo "✅ APK 已重命名为: droplink-dev-${{ env.VERSION_NAME }}.apk"
 
-      # 上传 APK 到 GitHub Artifacts
-      - name: 上传 APK
+      # 上传 APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: droplink-dev-${{ env.VERSION_NAME }}
           path: output/droplink-dev-${{ env.VERSION_NAME }}.apk
           retention-days: 30
 
-      # 输出构建信息
-      - name: 构建信息摘要
+      # 构建信息摘要
+      - name: Build summary
         run: |
           echo "## 🚀 Dev 构建成功" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

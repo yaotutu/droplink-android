@@ -37,12 +37,13 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
 
-      # 设置 JDK 11 环境（项目使用 Java 11）
-      - name: 设置 JDK 11
+      # 设置 JDK 17 环境（Android Gradle Plugin 8.13+ 要求 Java 17）
+      - name: Set up JDK
+        id: setup-java
         uses: actions/setup-java@v4
         with:
-          java-version: '11'
-          distribution: 'temurin'
+          distribution: temurin
+          java-version: "17"
           cache: gradle
 
       # 授予 gradlew 执行权限
