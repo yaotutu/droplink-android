@@ -1,19 +1,33 @@
 name: Android Release
 
 on:
-  workflow_dispatch:
+  # 推送到 main 分支时触发
   push:
     branches:
       - main
-      - dev
+    # 创建 tag 时触发（用于正式发布）
+    tags:
+      - 'v*'
+
+  # PR 检查
+  pull_request:
+    branches:
+      - main
+
+  # 允许手动触发
+  workflow_dispatch:
 
 jobs:
   build:
+    name: 构建 Release 版本
     runs-on: ubuntu-latest
+
     steps:
+      # 检出代码
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 设置 JDK 17
       - name: Set up JDK
         id: setup-java
         uses: actions/setup-java@v4
@@ -22,14 +36,32 @@ jobs:
           java-version: "17"
           cache: gradle
 
+      # 验证 Java 环境
       - name: Verify Java
         run: |
           echo "JAVA_HOME=$JAVA_HOME"
           java -version
 
+      # 授予 gradlew 执行权限
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      # 缓存 Gradle 依赖（加速构建）
+      - name: Cache Gradle packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # 运行测试
+      - name: Run tests
+        run: ./gradlew test --stacktrace
+
+      # 构建 Release APK
       - name: Build release APK
         env:
           KEYSTORE_FILE: ${{ secrets.KEYSTORE_FILE }}
@@ -40,8 +72,35 @@ jobs:
           echo "Using JAVA_HOME=$JAVA_HOME"
           ./gradlew assembleRelease --stacktrace
 
+      # 上传 APK 到 Artifacts
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-apk
+          name: droplink-release-${{ github.sha }}
           path: app/build/outputs/apk/release/app-release.apk
+          retention-days: 90
+
+      # 创建 GitHub Release（仅当推送 tag 时）
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: app/build/outputs/apk/release/app-release.apk
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 构建信息摘要
+      - name: Build summary
+        if: success()
+        run: |
+          echo "## ✅ Release 构建成功" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **分支**: main" >> $GITHUB_STEP_SUMMARY
+          echo "- **提交**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **构建时间**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            echo "- **发布版本**: ${GITHUB_REF#refs/tags/}" >> $GITHUB_STEP_SUMMARY
+          fi
