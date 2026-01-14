@@ -3,23 +3,4 @@
 
     <style name="Theme.Droplink" parent="android:Theme.Material.Light.NoActionBar" />
 
-    <!-- 后台分享专用透明主题 -->
-    <style name="Theme.Droplink.Transparent" parent="android:Theme.Material.NoActionBar">
-        <!-- 完全透明的窗口背景 -->
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:windowIsTranslucent">true</item>
-
-        <!-- 无动画，避免闪烁 -->
-        <item name="android:windowAnimationStyle">@null</item>
-        <item name="android:windowDisablePreview">true</item>
-
-        <!-- 不显示标题栏 -->
-        <item name="android:windowNoTitle">true</item>
-
-        <!-- 不在最近任务中显示 -->
-        <item name="android:excludeFromRecents">true</item>
-
-        <!-- 内容覆盖，无内边距 -->
-        <item name="android:windowContentOverlay">@null</item>
-    </style>
 </resources>
