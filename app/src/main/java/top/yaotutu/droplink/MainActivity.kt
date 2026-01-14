@@ -10,6 +10,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -147,12 +151,12 @@ class MainActivity : ComponentActivity() {
      * Android 特性：
      * - Activity 保持前台：确保进程不被系统冻结，网络请求能正常完成
      * - 状态化 UI：根据状态自动更新界面
-     * - mutableStateOf：Compose 的响应式状态管理
+     * - MutableState：Compose 的响应式状态管理（必须在 Composable 作用域内）
      * - lifecycleScope: Activity 生命周期相关的协程作用域
      * - withTimeout: 防止无限等待，30 秒超时
      *
      * 关键改进：
-     * - 使用状态化 UI，无需通知
+     * - 使用 Composable 内部的 remember 管理状态，确保重组生效
      * - 用户可以直接在界面上看到成功或失败
      * - 所有操作完成后才关闭
      * - 解决国产 ROM 后台限制问题
@@ -163,101 +167,99 @@ class MainActivity : ComponentActivity() {
         Log.d(TAG, "handleForegroundShare: start")
         Log.d(TAG, "Activity stays in foreground with status UI")
 
-        // 状态管理（类似 React 的 useState）
-        var shareStatus by mutableStateOf<ShareStatus>(ShareStatus.Loading)
-
-        // 显示状态化 UI
-        enableEdgeToEdge()
-        setContent {
-            DroplinkTheme {
-                ShareLoadingScreen(status = shareStatus)
-            }
-        }
-
         // 创建 ShareViewModel
         val repository = GotifyRepository(applicationContext)
         val viewModel = ShareViewModel(repository)
 
-        // 解析 Intent
-        viewModel.handleShareIntent(intent)
+        // 显示状态化 UI（使用 Composable 内部的状态管理）
+        enableEdgeToEdge()
+        setContent {
+            // 在 Composable 作用域内管理状态（类似 React 的 useState）
+            var shareStatus by remember { mutableStateOf<ShareStatus>(ShareStatus.Loading) }
 
-        // 在协程中等待解析完成，然后处理
-        lifecycleScope.launch {
-            try {
-                // 设置超时（30 秒）
-                withTimeout(30_000) {
-                    // 等待状态变为 Success 或 Error
-                    // filter: 只关注 Success 和 Error 状态
-                    // first: 获取第一个匹配的状态（然后自动取消监听）
-                    viewModel.uiState
-                        .filter { it is ShareUiState.Success || it is ShareUiState.Error }
-                        .first()
-                        .let { state ->
-                            when (state) {
-                                is ShareUiState.Success -> {
-                                    Log.d(TAG, "Parse success, processing in foreground")
-                                    // 前台处理分享数据
-                                    viewModel.processSharedDataInBackground(
-                                        onSuccess = { url ->
-                                            Log.d(TAG, "Share success: $url")
-                                            // 在协程中更新 UI 状态并延迟关闭
-                                            lifecycleScope.launch {
-                                                // 更新 UI 状态为成功
-                                                shareStatus = ShareStatus.Success(url)
-                                                // 延迟 1.5 秒让用户看到成功提示
-                                                delay(1500)
-                                                // 完成后移到后台并关闭
-                                                moveTaskToBack(true)
-                                                finish()
+            DroplinkTheme {
+                ShareLoadingScreen(status = shareStatus)
+            }
+
+            // 使用 LaunchedEffect 执行副作用（类似 React 的 useEffect）
+            LaunchedEffect(Unit) {
+                try {
+                    // 解析 Intent
+                    viewModel.handleShareIntent(intent)
+
+                    // 设置超时（30 秒）
+                    withTimeout(30_000) {
+                        // 等待状态变为 Success 或 Error
+                        viewModel.uiState
+                            .filter { it is ShareUiState.Success || it is ShareUiState.Error }
+                            .first()
+                            .let { state ->
+                                when (state) {
+                                    is ShareUiState.Success -> {
+                                        Log.d(TAG, "Parse success, processing in foreground")
+                                        // 前台处理分享数据
+                                        viewModel.processSharedDataInBackground(
+                                            onSuccess = { url ->
+                                                Log.d(TAG, "Share success: $url")
+                                                // 在新协程中更新 UI 状态并延迟关闭
+                                                lifecycleScope.launch {
+                                                    // 更新 UI 状态为成功
+                                                    shareStatus = ShareStatus.Success(url)
+                                                    // 延迟 1.5 秒让用户看到成功提示
+                                                    delay(1500)
+                                                    // 完成后移到后台并关闭
+                                                    moveTaskToBack(true)
+                                                    finish()
+                                                }
+                                            },
+                                            onError = { error ->
+                                                Log.e(TAG, "Share error: $error")
+                                                // 在新协程中更新 UI 状态并延迟关闭
+                                                lifecycleScope.launch {
+                                                    // 更新 UI 状态为失败
+                                                    shareStatus = ShareStatus.Error(error)
+                                                    // 延迟 2 秒让用户看到错误信息
+                                                    delay(2000)
+                                                    // 失败后也移到后台并关闭
+                                                    moveTaskToBack(true)
+                                                    finish()
+                                                }
                                             }
-                                        },
-                                        onError = { error ->
-                                            Log.e(TAG, "Share error: $error")
-                                            // 在协程中更新 UI 状态并延迟关闭
-                                            lifecycleScope.launch {
-                                                // 更新 UI 状态为失败
-                                                shareStatus = ShareStatus.Error(error)
-                                                // 延迟 2 秒让用户看到错误信息
-                                                delay(2000)
-                                                // 失败后也移到后台并关闭
-                                                moveTaskToBack(true)
-                                                finish()
-                                            }
-                                        }
-                                    )
-                                }
-                                is ShareUiState.Error -> {
-                                    Log.e(TAG, "Parse error: ${state.message}")
-                                    // 更新 UI 状态为失败
-                                    shareStatus = ShareStatus.Error(state.message)
-                                    // 延迟 2 秒让用户看到错误信息
-                                    delay(2000)
-                                    moveTaskToBack(true)
-                                    finish()
-                                }
-                                else -> {
-                                    // 不应该到达这里（filter 已经过滤了其他状态）
-                                    Log.w(TAG, "Unexpected state: $state")
-                                    shareStatus = ShareStatus.Error("未知错误")
-                                    delay(2000)
-                                    moveTaskToBack(true)
-                                    finish()
+                                        )
+                                    }
+                                    is ShareUiState.Error -> {
+                                        Log.e(TAG, "Parse error: ${state.message}")
+                                        // 更新 UI 状态为失败
+                                        shareStatus = ShareStatus.Error(state.message)
+                                        // 延迟 2 秒让用户看到错误信息
+                                        delay(2000)
+                                        moveTaskToBack(true)
+                                        finish()
+                                    }
+                                    else -> {
+                                        // 不应该到达这里（filter 已经过滤了其他状态）
+                                        Log.w(TAG, "Unexpected state: $state")
+                                        shareStatus = ShareStatus.Error("未知错误")
+                                        delay(2000)
+                                        moveTaskToBack(true)
+                                        finish()
+                                    }
                                 }
                             }
-                        }
+                    }
+                } catch (e: TimeoutCancellationException) {
+                    Log.e(TAG, "Foreground share timeout", e)
+                    shareStatus = ShareStatus.Error("处理超时，请重试")
+                    delay(2000)
+                    moveTaskToBack(true)
+                    finish()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Foreground share error", e)
+                    shareStatus = ShareStatus.Error("处理失败: ${e.message}")
+                    delay(2000)
+                    moveTaskToBack(true)
+                    finish()
                 }
-            } catch (e: TimeoutCancellationException) {
-                Log.e(TAG, "Foreground share timeout", e)
-                shareStatus = ShareStatus.Error("处理超时，请重试")
-                delay(2000)
-                moveTaskToBack(true)
-                finish()
-            } catch (e: Exception) {
-                Log.e(TAG, "Foreground share error", e)
-                shareStatus = ShareStatus.Error("处理失败: ${e.message}")
-                delay(2000)
-                moveTaskToBack(true)
-                finish()
             }
         }
     }
