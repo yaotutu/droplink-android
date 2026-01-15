@@ -16,7 +16,12 @@
       "mcp__chrome-devtools__list_pages",
       "Bash(git -C /Users/yaotutu/Desktop/code/droplink/droplink-android log --oneline -15)",
       "Bash(adb devices:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(python3:*)",
+      "Bash(pip3 install:*)",
+      "Bash(source:*)",
+      "Bash(pip install:*)",
+      "Bash(python:*)"
     ]
   },
   "outputStyle": "Learning"
