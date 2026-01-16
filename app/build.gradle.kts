@@ -24,7 +24,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // 配置：服务器地址（类似前端的 .env）
-        buildConfigField("String", "AUTH_SERVER_URL", "\"http://192.168.123.100:3600\"")
+        buildConfigField("String", "AUTH_SERVER_URL", "\"http://111.228.1.24:3600\"")
         buildConfigField("String", "GOTIFY_SERVER_URL", "\"http://111.228.1.24:2345\"")
         buildConfigField("String", "TEST_VERIFICATION_CODE", "\"0000\"")
         buildConfigField("String", "API_KEY", "\"your_api_key_here\"")  // 保留原有的 API_KEY

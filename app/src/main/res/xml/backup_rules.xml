@@ -1,13 +1,22 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    自动备份规则配置
+
+    为什么排除登录凭证：
+    - 安全性：token、密码等敏感信息不应备份到云端
+    - 开发体验：卸载应用应该完全清空登录状态，方便测试
+
+    详细文档：https://developer.android.com/guide/topics/data/autobackup
 -->
 <full-backup-content>
     <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+        排除登录凭证和敏感数据的备份
+        这样卸载应用后，用户需要重新登录
+    -->
+
+    <!-- 排除用户会话数据（登录状态、用户信息） -->
+    <exclude domain="sharedpref" path="droplink_session.xml"/>
+
+    <!-- 排除 Token 数据（appToken、clientToken） -->
+    <exclude domain="sharedpref" path="droplink_tokens.xml"/>
 </full-backup-content>

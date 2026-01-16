@@ -50,7 +50,7 @@ class AuthRepositoryImpl(
     override fun validateVerificationCode(code: String): ValidationResult {
         return when {
             code.isEmpty() -> ValidationResult(false, "验证码不能为空")
-            code.length != 4 -> ValidationResult(false, "验证码必须是4位")
+            code.length != 6 -> ValidationResult(false, "验证码必须是6位")
             !code.all { it.isDigit() } -> ValidationResult(false, "验证码必须全部为数字")
             else -> ValidationResult(true)
         }

@@ -382,7 +382,7 @@ fun LoginForm(
         // === 登录按钮 ===
         Button(
             onClick = onLoginClick,
-            enabled = !uiState.isLoading && uiState.verificationCode.length == 4,
+            enabled = !uiState.isLoading && uiState.verificationCode.length == 6,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
