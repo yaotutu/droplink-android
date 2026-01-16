@@ -20,6 +20,7 @@ import top.yaotutu.droplink.R
 import top.yaotutu.droplink.data.model.ShareType
 import top.yaotutu.droplink.data.model.SharedData
 import top.yaotutu.droplink.data.repository.GotifyRepository
+import top.yaotutu.droplink.util.UrlExtractor
 
 /**
  * 分享 ViewModel
@@ -93,11 +94,22 @@ class ShareViewModel(
             Intent.ACTION_SEND -> {
                 when {
                     type?.startsWith("text/") == true -> {
-                        val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+                        val rawText = intent.getStringExtra(Intent.EXTRA_TEXT)
                         val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT)
+
+                        // 智能提取 URL（处理不同浏览器的分享格式差异）
+                        // 例如：
+                        // - Chrome: "https://v2ex.com/"
+                        // - Via: "V2EX\nhttps://v2ex.com/"
+                        // - Firefox: "V2EX https://v2ex.com/"
+                        val extractedText = UrlExtractor.extract(rawText)
+
+                        Log.d(TAG, "Raw text: $rawText")
+                        Log.d(TAG, "Extracted text: $extractedText")
+
                         SharedData(
                             type = ShareType.TEXT,
-                            text = text,
+                            text = extractedText,
                             subject = subject,
                             mimeType = type
                         )
