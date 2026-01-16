@@ -11,6 +11,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import top.yaotutu.droplink.MainActivity
+import top.yaotutu.droplink.R
 
 /**
  * 通知助手类
@@ -43,7 +44,6 @@ class NotificationHelper(private val context: Context) {
 
         // Channel ID（通知渠道标识）
         private const val CHANNEL_ID = "droplink_share_channel"
-        private const val CHANNEL_NAME = "分享通知"
 
         // Notification ID（用于区分不同通知）
         private const val NOTIFICATION_ID_SUCCESS = 1001
@@ -67,10 +67,10 @@ class NotificationHelper(private val context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                CHANNEL_NAME,
+                context.getString(R.string.notification_channel_share),
                 NotificationManager.IMPORTANCE_DEFAULT  // 默认重要性（有声音，会在状态栏显示）
             ).apply {
-                description = "用于显示分享处理结果"
+                description = context.getString(R.string.notification_channel_share_description)
                 enableLights(true)  // 允许呼吸灯
                 lightColor = Color.GREEN
                 enableVibration(false)  // 禁用振动（分享通知无需打扰用户）
@@ -117,8 +117,8 @@ class NotificationHelper(private val context: Context) {
         // 构建通知
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_upload_done)  // 小图标（上传完成）
-            .setContentTitle("分享成功")
-            .setContentText("已发送到 Gotify")
+            .setContentTitle(context.getString(R.string.notification_share_success_title))
+            .setContentText(context.getString(R.string.notification_share_success_message))
             .setStyle(
                 NotificationCompat.BigTextStyle()
                     .bigText("URL: ${truncateUrl(url)}")  // 展开时显示完整 URL
@@ -164,7 +164,7 @@ class NotificationHelper(private val context: Context) {
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_notify_error)  // 小图标（错误）
-            .setContentTitle("分享失败")
+            .setContentTitle(context.getString(R.string.notification_share_error_title))
             .setContentText(errorMessage)
             .setStyle(
                 NotificationCompat.BigTextStyle()

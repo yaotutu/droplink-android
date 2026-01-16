@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import top.yaotutu.droplink.R
 import top.yaotutu.droplink.data.model.ShareType
 import top.yaotutu.droplink.data.model.SharedData
 import top.yaotutu.droplink.data.repository.GotifyRepository
@@ -28,9 +29,11 @@ import top.yaotutu.droplink.data.repository.GotifyRepository
  * - StateFlow ≈ useState + useReducer
  * - SharedFlow ≈ EventEmitter（单次事件）
  *
+ * @property context 应用上下文（用于获取国际化字符串资源）
  * @property gotifyRepository Gotify 数据仓库（用于发送消息）
  */
 class ShareViewModel(
+    private val context: Context,
     private val gotifyRepository: GotifyRepository
 ) : ViewModel() {
 
@@ -54,7 +57,7 @@ class ShareViewModel(
             try {
                 if (intent == null) {
                     Log.e(TAG, "Intent is null")
-                    _uiState.value = ShareUiState.Error("未接收到分享数据")
+                    _uiState.value = ShareUiState.Error(context.getString(R.string.share_error_no_data))
                     return@launch
                 }
 
@@ -70,12 +73,14 @@ class ShareViewModel(
                     Log.d(TAG, "Share data is valid, emitted navigation event")
                 } else {
                     Log.e(TAG, "Share data is invalid")
-                    _uiState.value = ShareUiState.Error("分享数据无效")
+                    _uiState.value = ShareUiState.Error(context.getString(R.string.share_error_invalid_data))
                 }
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error parsing intent", e)
-                _uiState.value = ShareUiState.Error("解析失败: ${e.message}")
+                _uiState.value = ShareUiState.Error(
+                    context.getString(R.string.share_error_parse_failed, e.message)
+                )
             }
         }
     }
@@ -149,13 +154,13 @@ class ShareViewModel(
 
             // 只处理文本/URL 分享
             if (sharedData.type != ShareType.TEXT || sharedData.text.isNullOrBlank()) {
-                _uiState.value = ShareUiState.Error("暂不支持此类型的分享")
+                _uiState.value = ShareUiState.Error(context.getString(R.string.share_error_unsupported_type))
                 return@launch
             }
 
             // 检查是否有 Token
             if (!gotifyRepository.hasValidToken()) {
-                _uiState.value = ShareUiState.Error("未登录，请先登录后再分享")
+                _uiState.value = ShareUiState.Error(context.getString(R.string.share_error_not_logged_in))
                 return@launch
             }
 
@@ -187,7 +192,9 @@ class ShareViewModel(
 
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send message", e)
-                _uiState.value = ShareUiState.Error("发送失败: ${e.message}")
+                _uiState.value = ShareUiState.Error(
+                    context.getString(R.string.share_error_send_failed, e.message)
+                )
             }
         }
     }
@@ -245,7 +252,7 @@ class ShareViewModel(
                 // 1. 获取当前状态
                 val currentState = _uiState.value
                 if (currentState !is ShareUiState.Success) {
-                    onError("未接收到分享数据")
+                    onError(context.getString(R.string.share_error_no_data))
                     return@launch
                 }
 
@@ -253,13 +260,13 @@ class ShareViewModel(
 
                 // 2. 验证数据类型（当前只支持文本/URL）
                 if (sharedData.type != ShareType.TEXT || sharedData.text.isNullOrBlank()) {
-                    onError("暂不支持此类型的分享")
+                    onError(context.getString(R.string.share_error_unsupported_type))
                     return@launch
                 }
 
                 // 3. 检查登录状态
                 if (!gotifyRepository.hasValidToken()) {
-                    onError("未登录，请先登录后再分享")
+                    onError(context.getString(R.string.share_error_not_logged_in))
                     return@launch
                 }
 
@@ -272,7 +279,7 @@ class ShareViewModel(
 
             } catch (e: Exception) {
                 Log.e(TAG, "Background processing failed", e)
-                onError("发送失败: ${e.message}")
+                onError(context.getString(R.string.share_error_send_failed, e.message))
             }
         }
     }
@@ -295,7 +302,7 @@ class ShareViewModelFactory(
         if (modelClass.isAssignableFrom(ShareViewModel::class.java)) {
             val repository = GotifyRepository(context)
             @Suppress("UNCHECKED_CAST")
-            return ShareViewModel(repository) as T
+            return ShareViewModel(context, repository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

@@ -266,8 +266,8 @@ fun LoginForm(
                 OutlinedTextField(
                     value = uiState.serverAddress,
                     onValueChange = onServerAddressChange,
-                    label = { Text("服务器地址") },
-                    placeholder = { Text("http://111.228.1.24:2345/") },
+                    label = { Text(stringResource(R.string.login_server_address_label)) },
+                    placeholder = { Text(stringResource(R.string.login_server_address_hint)) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Filled.Lock,
@@ -441,8 +441,8 @@ fun LoginModeTabs(
     enabled: Boolean = true
 ) {
     val tabs = listOf(
-        LoginMode.OFFICIAL to "官方服务器",
-        LoginMode.SELF_HOSTED to "自建服务器"
+        LoginMode.OFFICIAL to stringResource(R.string.login_mode_official),
+        LoginMode.SELF_HOSTED to stringResource(R.string.login_mode_self_hosted)
     )
 
     TabRow(
@@ -503,8 +503,8 @@ fun SelfHostedLoginForm(
             OutlinedTextField(
                 value = uiState.gotifyServerUrl,
                 onValueChange = onGotifyServerUrlChange,
-                label = { Text("Gotify 服务器地址") },
-                placeholder = { Text("http://192.168.1.100:8080") },
+                label = { Text(stringResource(R.string.login_gotify_server_label)) },
+                placeholder = { Text(stringResource(R.string.login_gotify_server_hint)) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Filled.Lock,
@@ -531,8 +531,8 @@ fun SelfHostedLoginForm(
             OutlinedTextField(
                 value = uiState.selfHostedAppToken,
                 onValueChange = onAppTokenChange,
-                label = { Text("App Token") },
-                placeholder = { Text("Ah17tk7rkgdueDR") },
+                label = { Text(stringResource(R.string.login_app_token_label)) },
+                placeholder = { Text(stringResource(R.string.login_app_token_hint)) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Lock,
@@ -559,8 +559,8 @@ fun SelfHostedLoginForm(
             OutlinedTextField(
                 value = uiState.selfHostedClientToken,
                 onValueChange = onClientTokenChange,
-                label = { Text("Client Token") },
-                placeholder = { Text("CNfL5mCmRXBb8Jo") },
+                label = { Text(stringResource(R.string.login_client_token_label)) },
+                placeholder = { Text(stringResource(R.string.login_client_token_hint)) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Lock,
@@ -585,7 +585,7 @@ fun SelfHostedLoginForm(
 
             // === 提示文本 ===
             Text(
-                text = "请在 Gotify 服务器中创建应用获取 Token",
+                text = stringResource(R.string.login_self_hosted_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 4.dp)
@@ -623,7 +623,7 @@ fun SelfHostedLoginForm(
             )
         } else {
             Text(
-                text = "登录",
+                text = stringResource(R.string.login_self_hosted_button),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )

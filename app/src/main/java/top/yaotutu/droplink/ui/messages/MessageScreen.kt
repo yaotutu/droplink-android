@@ -57,6 +57,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import androidx.compose.ui.res.stringResource
+import top.yaotutu.droplink.R
 
 /**
  * 消息列表页面 - 基于 Droplink 消息格式
@@ -136,7 +138,7 @@ fun MessageScreen(
                         ) {
                             Text(text = state.message)
                             Button(onClick = { viewModel.loadMessages() }) {
-                                Text("重试")
+                                Text(stringResource(R.string.message_retry))
                             }
                         }
                     }
@@ -349,7 +351,7 @@ fun EmptyMessageState() {
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Email,
-                        contentDescription = "暂无消息",
+                        contentDescription = stringResource(R.string.message_empty_title),
                         modifier = Modifier.size(40.dp),
                         tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
                     )
@@ -359,7 +361,7 @@ fun EmptyMessageState() {
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "暂无消息",
+                text = stringResource(R.string.message_empty_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -368,7 +370,7 @@ fun EmptyMessageState() {
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "当有新消息时，会在这里显示",
+                text = stringResource(R.string.message_empty_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center

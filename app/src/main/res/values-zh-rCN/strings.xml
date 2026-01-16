@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Droplink 中文字符串资源（简体中文）
+
+  设计原则：
+  - 所有 UI 文本必须在 strings.xml 中定义
+  - 禁止在代码中硬编码字符串
+  - 使用参数化字符串支持动态内容（如 %s、%d）
+
+  React 概念对标：
+  - strings.xml ≈ zh-CN.json（i18n 资源文件）
+  - stringResource(id) ≈ t('key')（翻译函数）
+-->
+<resources>
+    <string name="app_name">droplink</string>
+
+    <!-- ==================== 登录页面 ==================== -->
+    <string name="login_welcome_title">欢迎来到 Droplink</string>
+    <string name="login_welcome_subtitle">输入邮箱，我们将发送验证码</string>
+    <string name="login_email_label">邮箱</string>
+    <string name="login_verification_code_label">验证码</string>
+    <string name="login_send_code">发送验证码</string>
+    <string name="login_resend_code">重新发送</string>
+    <string name="login_countdown">%d秒后重试</string>
+    <string name="login_button">登录 / 注册</string>
+    <string name="login_close">关闭</string>
+
+    <!-- 服务器地址输入框 -->
+    <string name="login_server_address_label">服务器地址</string>
+    <string name="login_server_address_hint">http://111.228.1.24:2345/</string>
+
+    <!-- 登录模式 Tab -->
+    <string name="login_mode_official">官方服务器</string>
+    <string name="login_mode_self_hosted">自建服务器</string>
+
+    <!-- 自建服务器表单 -->
+    <string name="login_gotify_server_label">Gotify 服务器地址</string>
+    <string name="login_gotify_server_hint">http://192.168.1.100:8080</string>
+    <string name="login_app_token_label">App Token</string>
+    <string name="login_app_token_hint">Ah17tk7rkgdueDR</string>
+    <string name="login_client_token_label">Client Token</string>
+    <string name="login_client_token_hint">CNfL5mCmRXBb8Jo</string>
+    <string name="login_self_hosted_hint">请在 Gotify 服务器中创建应用获取 Token</string>
+    <string name="login_self_hosted_button">登录</string>
+
+    <!-- 验证错误信息 -->
+    <string name="error_email_empty">邮箱不能为空</string>
+    <string name="error_email_invalid">邮箱格式不正确</string>
+    <string name="error_verification_code_empty">验证码不能为空</string>
+    <string name="error_verification_code_invalid">验证码必须是6位数字</string>
+    <string name="error_verification_code_wrong">验证码错误或已过期</string>
+    <string name="error_send_code_failed">发送验证码失败</string>
+
+    <!-- 自建服务器验证错误 -->
+    <string name="error_gotify_url_empty">服务器地址不能为空</string>
+    <string name="error_gotify_url_invalid">服务器地址格式不正确，需以 http:// 或 https:// 开头</string>
+    <string name="error_app_token_empty">App Token 不能为空</string>
+    <string name="error_app_token_invalid">Token 格式不正确（至少8位）</string>
+    <string name="error_client_token_empty">Client Token 不能为空</string>
+    <string name="error_client_token_invalid">Token 格式不正确（至少8位）</string>
+    <string name="error_token_verification_failed">Token 验证失败，请检查是否正确</string>
+
+    <!-- ==================== 主页 ==================== -->
+    <string name="home_welcome">欢迎, %s!</string>
+    <string name="home_subtitle">这是一个现代化的 Android 应用</string>
+    <string name="home_profile_card_title">个人中心</string>
+    <string name="home_profile_card_desc">查看和管理您的个人信息</string>
+    <string name="home_logout">退出登录</string>
+
+    <!-- ==================== 个人中心 ==================== -->
+    <string name="profile_title">个人中心</string>
+    <string name="profile_back">返回</string>
+    <string name="profile_avatar">用户头像</string>
+    <string name="profile_label_id">用户 ID</string>
+    <string name="profile_label_token">认证令牌</string>
+
+    <!-- ==================== 消息列表 ==================== -->
+    <string name="message_title">消息</string>
+    <string name="message_empty_title">暂无消息</string>
+    <string name="message_empty_subtitle">当有新消息时，会在这里显示</string>
+    <string name="message_retry">重试</string>
+    <string name="message_loading">加载中…</string>
+
+    <!-- 消息卡片字段 -->
+    <string name="message_field_id">id</string>
+    <string name="message_field_sender">sender</string>
+    <string name="message_field_content_type">contentType</string>
+    <string name="message_field_content_value">contentValue</string>
+    <string name="message_field_timestamp">timestamp</string>
+    <string name="message_field_display_time">displayTime</string>
+    <string name="message_field_tags">tags</string>
+    <string name="message_field_actions">actions</string>
+
+    <!-- ==================== 分享功能 ==================== -->
+    <string name="share_title">分享</string>
+    <string name="share_processing">处理中…</string>
+    <string name="share_success">分享成功</string>
+    <string name="share_failed">分享失败</string>
+    <string name="share_error_no_data">未接收到分享数据</string>
+    <string name="share_error_invalid_data">分享数据无效</string>
+    <string name="share_error_parse_failed">解析失败: %s</string>
+    <string name="share_error_unsupported_type">暂不支持此类型的分享</string>
+    <string name="share_error_not_logged_in">未登录，请先登录后再分享</string>
+    <string name="share_error_send_failed">发送失败: %s</string>
+
+    <!-- ==================== 通知 ==================== -->
+    <string name="notification_channel_share">分享通知</string>
+    <string name="notification_channel_share_description">用于显示分享处理结果</string>
+    <string name="notification_share_success_title">分享成功</string>
+    <string name="notification_share_success_message">已发送到 Gotify</string>
+    <string name="notification_share_error_title">分享失败</string>
+
+    <!-- ==================== 设置 ==================== -->
+    <string name="settings_title">设置</string>
+    <string name="settings_language">语言</string>
+    <string name="settings_theme">主题</string>
+
+    <!-- ==================== 通用文本 ==================== -->
+    <string name="common_ok">确定</string>
+    <string name="common_cancel">取消</string>
+    <string name="common_confirm">确认</string>
+    <string name="common_delete">删除</string>
+    <string name="common_save">保存</string>
+    <string name="common_loading">加载中…</string>
+    <string name="common_error">错误</string>
+    <string name="common_success">成功</string>
+
+    <!-- ==================== 时间格式化 ==================== -->
+    <string name="time_today">今天</string>
+    <string name="time_yesterday">昨天</string>
+    <string name="time_just_now">刚刚</string>
+
+    <!-- 星期名称（用于 DateFormatter） -->
+    <string-array name="weekdays">
+        <item>周一</item>
+        <item>周二</item>
+        <item>周三</item>
+        <item>周四</item>
+        <item>周五</item>
+        <item>周六</item>
+        <item>周日</item>
+    </string-array>
+</resources>

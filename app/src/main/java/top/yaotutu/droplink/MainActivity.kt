@@ -65,6 +65,22 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // 🐛 调试：检查语言设置
+        val config = resources.configuration
+        val locale = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            config.locales[0]
+        } else {
+            @Suppress("DEPRECATION")
+            config.locale
+        }
+        Log.d(TAG, "=== Language Debug Info ===")
+        Log.d(TAG, "Current Locale: $locale")
+        Log.d(TAG, "Language: ${locale.language}")
+        Log.d(TAG, "Country: ${locale.country}")
+        Log.d(TAG, "Test string (app_name): ${getString(R.string.app_name)}")
+        Log.d(TAG, "Test string (login_title): ${getString(R.string.login_welcome_title)}")
+        Log.d(TAG, "============================")
+
         Log.d(TAG, "onCreate called")
         Log.d(TAG, "Intent action: ${intent?.action}")
         Log.d(TAG, "Intent type: ${intent?.type}")
@@ -169,7 +185,7 @@ class MainActivity : ComponentActivity() {
 
         // 创建 ShareViewModel
         val repository = GotifyRepository(applicationContext)
-        val viewModel = ShareViewModel(repository)
+        val viewModel = ShareViewModel(applicationContext, repository)
 
         // 显示状态化 UI（使用 Composable 内部的状态管理）
         enableEdgeToEdge()

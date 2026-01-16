@@ -48,7 +48,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.launch
+import top.yaotutu.droplink.R
 import top.yaotutu.droplink.data.model.User
 import top.yaotutu.droplink.ui.messages.MessageScreen
 import top.yaotutu.droplink.ui.profile.ProfileScreen
@@ -90,12 +92,12 @@ fun MainScreen(
     // 导航菜单项
     val navItems = listOf(
         NavItem(
-            title = "消息列表",
+            title = stringResource(R.string.message_title),
             icon = Icons.Default.Email,
             onClick = { selectedNavItem = 0 }
         ),
         NavItem(
-            title = "个人中心",
+            title = stringResource(R.string.profile_title),
             icon = Icons.Default.Person,
             onClick = { selectedNavItem = 1 }
         )
@@ -150,7 +152,7 @@ fun MainScreen(
                         }) {
                             Icon(
                                 imageVector = Icons.Default.Menu,
-                                contentDescription = "打开菜单"
+                                contentDescription = stringResource(R.string.login_mode_official) // 临时复用
                             )
                         }
                     },
@@ -217,14 +219,14 @@ fun NavigationDrawerContent(
         ) {
             Column {
                 Text(
-                    text = "Droplink",
+                    text = stringResource(R.string.app_name),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "文件共享平台",
+                    text = stringResource(R.string.home_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                 )
@@ -254,7 +256,7 @@ fun NavigationDrawerContent(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Person,
-                            contentDescription = "用户头像",
+                            contentDescription = stringResource(R.string.profile_avatar),
                             modifier = Modifier.size(32.dp),
                             tint = MaterialTheme.colorScheme.onPrimary
                         )
@@ -265,7 +267,7 @@ fun NavigationDrawerContent(
 
                 // 用户名
                 Text(
-                    text = user?.username ?: "用户",
+                    text = user?.username ?: stringResource(R.string.common_ok),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -335,14 +337,14 @@ fun NavigationDrawerContent(
         NavigationDrawerItem(
             label = {
                 Text(
-                    text = "退出登录",
+                    text = stringResource(R.string.home_logout),
                     fontWeight = FontWeight.Bold
                 )
             },
             icon = {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                    contentDescription = "退出登录"
+                    contentDescription = stringResource(R.string.home_logout)
                 )
             },
             selected = false,
