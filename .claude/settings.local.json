@@ -21,7 +21,9 @@
       "Bash(pip3 install:*)",
       "Bash(source:*)",
       "Bash(pip install:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(adb install:*)",
+      "Bash(adb shell screencap:*)"
     ]
   },
   "outputStyle": "Learning"

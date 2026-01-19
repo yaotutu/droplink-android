@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Menu
@@ -52,6 +53,7 @@ import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.launch
 import top.yaotutu.droplink.R
 import top.yaotutu.droplink.data.model.User
+import top.yaotutu.droplink.ui.activity.ActivityScreen
 import top.yaotutu.droplink.ui.messages.MessageScreen
 import top.yaotutu.droplink.ui.profile.ProfileScreen
 
@@ -86,8 +88,8 @@ fun MainScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
 
-    // 当前选中的菜单项（默认为消息列表 = 0）
-    var selectedNavItem by rememberSaveable { mutableIntStateOf(0) }
+    // 当前选中的菜单项（默认为 Activity = 1）
+    var selectedNavItem by rememberSaveable { mutableIntStateOf(1) }
 
     // 导航菜单项
     val navItems = listOf(
@@ -97,9 +99,14 @@ fun MainScreen(
             onClick = { selectedNavItem = 0 }
         ),
         NavItem(
+            title = stringResource(R.string.activity_title),
+            icon = Icons.AutoMirrored.Filled.List,
+            onClick = { selectedNavItem = 1 }
+        ),
+        NavItem(
             title = stringResource(R.string.profile_title),
             icon = Icons.Default.Person,
-            onClick = { selectedNavItem = 1 }
+            onClick = { selectedNavItem = 2 }
         )
     )
 
@@ -168,7 +175,10 @@ fun MainScreen(
                 0 -> MessageScreen(
                     modifier = Modifier.padding(paddingValues)
                 )
-                1 -> ProfileScreen(
+                1 -> ActivityScreen(
+                    modifier = Modifier.padding(paddingValues)
+                )
+                2 -> ProfileScreen(
                     user = user,
                     onBackClick = onLogout,
                     modifier = Modifier.padding(paddingValues)
