@@ -46,6 +46,19 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      # 设置版本号（基于 Git 提交总数，与 dev 分支保持一致）
+      - name: 设置版本号
+        id: version
+        run: |
+          # 使用 Git 提交总数作为版本号基准（与 dev 分支一致）
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          VERSION_NAME="0.1.${COMMIT_COUNT}"
+          VERSION_CODE=${COMMIT_COUNT}
+          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
+          echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
+          echo "📦 Release 版本号: $VERSION_NAME (versionCode: $VERSION_CODE)"
+          echo "📊 基于 Git 提交总数: $COMMIT_COUNT"
+
       # 缓存 Gradle 依赖（加速构建）
       - name: Cache Gradle packages
         uses: actions/cache@v3
@@ -68,24 +81,68 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          VERSION_NAME: ${{ env.VERSION_NAME }}
+          VERSION_CODE: ${{ env.VERSION_CODE }}
         run: |
           echo "Using JAVA_HOME=$JAVA_HOME"
           ./gradlew assembleRelease --stacktrace
+
+      # 重命名 APK 文件
+      - name: Rename APK
+        run: |
+          mkdir -p output
+          cp app/build/outputs/apk/release/app-release.apk output/droplink-release-${{ env.VERSION_NAME }}.apk
+          echo "✅ APK 已重命名为: droplink-release-${{ env.VERSION_NAME }}.apk"
 
       # 上传 APK 到 Artifacts
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: droplink-release-${{ github.sha }}
-          path: app/build/outputs/apk/release/app-release.apk
+          name: droplink-release-${{ env.VERSION_NAME }}
+          path: output/droplink-release-${{ env.VERSION_NAME }}.apk
           retention-days: 90
 
-      # 创建 GitHub Release（仅当推送 tag 时）
-      - name: Create GitHub Release
+      # 自动发布到 GitHub Release (覆盖式发布 main-latest)
+      - name: Create or Update Main Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: main-latest
+          name: "✅ 正式版 (最新稳定版)"
+          body: |
+            ## 📦 Droplink 正式版 - 稳定发布
+
+            **版本号**: `${{ env.VERSION_NAME }}`
+            **版本代码**: `${{ env.VERSION_CODE }}`
+            **构建分支**: `main`
+            **提交 SHA**: `${{ github.sha }}`
+            **构建时间**: `$(date -u '+%Y-%m-%d %H:%M:%S UTC')`
+
+            ---
+
+            ### 📥 下载说明
+            - 这是**正式稳定版本**，已通过完整测试
+            - 每次 main 分支更新时，此 Release 会被**自动覆盖**
+            - 如需测试最新功能，请访问 [Dev 开发版 Release](../../releases/tag/dev-latest)
+
+            ### 🔗 固定下载链接（永久有效）
+            ```
+            https://github.com/${{ github.repository }}/releases/download/main-latest/droplink-release-${{ env.VERSION_NAME }}.apk
+            ```
+
+            ### 📝 最近提交
+            ${{ github.event.head_commit.message }}
+          files: output/droplink-release-${{ env.VERSION_NAME }}.apk
+          draft: false
+          prerelease: false  # 标记为正式版本
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 创建版本化 Release（仅当推送 tag 时，如 v1.0.0）
+      - name: Create Versioned GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          files: app/build/outputs/apk/release/app-release.apk
+          files: output/droplink-release-${{ env.VERSION_NAME }}.apk
           generate_release_notes: true
           draft: false
           prerelease: false
@@ -98,9 +155,17 @@ jobs:
         run: |
           echo "## ✅ Release 构建成功" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **版本号**: ${{ env.VERSION_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **版本代码**: ${{ env.VERSION_CODE }}" >> $GITHUB_STEP_SUMMARY
           echo "- **分支**: main" >> $GITHUB_STEP_SUMMARY
           echo "- **提交**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "- **构建时间**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📥 固定下载链接" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "https://github.com/${{ github.repository }}/releases/download/main-latest/droplink-release-${{ env.VERSION_NAME }}.apk" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           if [[ $GITHUB_REF == refs/tags/* ]]; then
-            echo "- **发布版本**: ${GITHUB_REF#refs/tags/}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- **发布版本标签**: ${GITHUB_REF#refs/tags/}" >> $GITHUB_STEP_SUMMARY
           fi

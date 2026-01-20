@@ -38,15 +38,18 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      # 设置版本号（0.1.x 格式）
+      # 设置版本号（基于 Git 提交总数，确保 dev 和 main 版本号一致）
       - name: 设置版本号
         id: version
         run: |
-          VERSION_NAME="0.1.${{ github.run_number }}"
-          VERSION_CODE=${{ github.run_number }}
+          # 使用 Git 提交总数作为版本号基准
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          VERSION_NAME="0.1.${COMMIT_COUNT}"
+          VERSION_CODE=${COMMIT_COUNT}
           echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
           echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
-          echo "📦 版本号: $VERSION_NAME (versionCode: $VERSION_CODE)"
+          echo "📦 Dev 版本号: $VERSION_NAME (versionCode: $VERSION_CODE)"
+          echo "📊 基于 Git 提交总数: $COMMIT_COUNT"
 
       # 运行单元测试
       - name: Run tests
@@ -76,6 +79,41 @@ jobs:
           path: output/droplink-dev-${{ env.VERSION_NAME }}.apk
           retention-days: 30
 
+      # 自动发布到 GitHub Release (覆盖式发布 dev-latest)
+      - name: Create or Update Dev Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: dev-latest
+          name: "🚀 Dev 开发版 (最新)"
+          body: |
+            ## 📦 Droplink Dev 开发版 - 自动构建
+
+            **版本号**: `${{ env.VERSION_NAME }}`
+            **版本代码**: `${{ env.VERSION_CODE }}`
+            **构建分支**: `dev`
+            **提交 SHA**: `${{ github.sha }}`
+            **构建时间**: `$(date -u '+%Y-%m-%d %H:%M:%S UTC')`
+
+            ---
+
+            ### 📥 下载说明
+            - 这是**开发测试版本**，可能包含未完成的功能或 Bug
+            - 每次 dev 分支更新时，此 Release 会被**自动覆盖**
+            - 如需稳定版本，请访问 [正式版 Release](../../releases/tag/main-latest)
+
+            ### 🔗 固定下载链接（永久有效）
+            ```
+            https://github.com/${{ github.repository }}/releases/download/dev-latest/droplink-dev-${{ env.VERSION_NAME }}.apk
+            ```
+
+            ### 📝 最近提交
+            ${{ github.event.head_commit.message }}
+          files: output/droplink-dev-${{ env.VERSION_NAME }}.apk
+          draft: false
+          prerelease: true  # 标记为预发布版本
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       # 构建信息摘要
       - name: Build summary
         run: |
@@ -86,3 +124,8 @@ jobs:
           echo "- **分支**: dev" >> $GITHUB_STEP_SUMMARY
           echo "- **提交**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "- **构建时间**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📥 固定下载链接" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "https://github.com/${{ github.repository }}/releases/download/dev-latest/droplink-dev-${{ env.VERSION_NAME }}.apk" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
