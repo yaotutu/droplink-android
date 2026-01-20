@@ -323,7 +323,15 @@ class MessageViewModel(
                     actionsElement.jsonArray.mapNotNull { actionElement ->
                         if (actionElement !is JsonObject) return@mapNotNull null
                         val type = actionElement["type"]?.jsonPrimitive?.content ?: return@mapNotNull null
-                        val target = actionElement["params"]?.jsonObject?.get("target")?.jsonPrimitive?.content
+
+                        // 安全解析 params.target（处理 params 为 null 的情况）
+                        val paramsElement = actionElement["params"]
+                        val target = if (paramsElement is JsonObject) {
+                            paramsElement["target"]?.jsonPrimitive?.content
+                        } else {
+                            null
+                        }
+
                         ActionItem(
                             type = type,
                             target = target,
@@ -458,14 +466,48 @@ class MessageViewModel(
      * React 概念对标：
      * - const parseDate = (dateString) => new Date(dateString).getTime()
      *
-     * 格式: "2024-01-10T10:30:00Z"
+     * 支持多种格式:
+     * - "2024-01-10T10:30:00Z" (UTC)
+     * - "2026-01-16T22:37:36.811284405+08:00" (带时区和纳秒)
+     * - "2024-01-10T10:30:00.123Z" (带毫秒)
+     *
      * 返回: Unix timestamp (毫秒)
      */
     private fun parseGotifyDate(dateString: String): Long {
         return try {
-            val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
-            format.timeZone = TimeZone.getTimeZone("UTC")
-            format.parse(dateString)?.time ?: System.currentTimeMillis()
+            // 预处理：移除纳秒部分（超过3位的小数部分）
+            // 例如：2026-01-16T22:37:36.811284405+08:00 -> 2026-01-16T22:37:36.811+08:00
+            val processedDate = dateString.replace(Regex("\\.\\d{3}(\\d+)"), ".$1").replace(Regex("\\.\\d+(\\d{3})([+-Z])"), ".$1$2")
+
+            // 尝试多种日期格式
+            val formats = listOf(
+                // 带时区偏移和毫秒：2026-01-16T22:37:36.811+08:00
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.US),
+                // 带时区偏移无毫秒：2026-01-16T22:37:36+08:00
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US),
+                // UTC 格式带毫秒：2024-01-10T10:30:00.123Z
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                },
+                // UTC 格式无毫秒：2024-01-10T10:30:00Z
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                }
+            )
+
+            // 尝试每种格式
+            for (format in formats) {
+                try {
+                    return format.parse(processedDate)?.time ?: continue
+                } catch (e: Exception) {
+                    // 继续尝试下一种格式
+                    continue
+                }
+            }
+
+            // 所有格式都失败，记录错误并返回当前时间
+            Log.e(TAG, "Failed to parse date with all formats: $dateString")
+            System.currentTimeMillis()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to parse date: $dateString", e)
             System.currentTimeMillis()
