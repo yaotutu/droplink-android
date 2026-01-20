@@ -53,7 +53,6 @@ import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.launch
 import top.yaotutu.droplink.R
 import top.yaotutu.droplink.data.model.User
-import top.yaotutu.droplink.ui.activity.ActivityScreen
 import top.yaotutu.droplink.ui.messages.MessageScreen
 import top.yaotutu.droplink.ui.profile.ProfileScreen
 
@@ -88,8 +87,8 @@ fun MainScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
 
-    // 当前选中的菜单项（默认为 Activity = 1）
-    var selectedNavItem by rememberSaveable { mutableIntStateOf(1) }
+    // 当前选中的菜单项（默认为 Messages = 0）
+    var selectedNavItem by rememberSaveable { mutableIntStateOf(0) }
 
     // 导航菜单项
     val navItems = listOf(
@@ -99,14 +98,9 @@ fun MainScreen(
             onClick = { selectedNavItem = 0 }
         ),
         NavItem(
-            title = stringResource(R.string.activity_title),
-            icon = Icons.AutoMirrored.Filled.List,
-            onClick = { selectedNavItem = 1 }
-        ),
-        NavItem(
             title = stringResource(R.string.profile_title),
             icon = Icons.Default.Person,
-            onClick = { selectedNavItem = 2 }
+            onClick = { selectedNavItem = 1 }
         )
     )
 
@@ -175,10 +169,7 @@ fun MainScreen(
                 0 -> MessageScreen(
                     modifier = Modifier.padding(paddingValues)
                 )
-                1 -> ActivityScreen(
-                    modifier = Modifier.padding(paddingValues)
-                )
-                2 -> ProfileScreen(
+                1 -> ProfileScreen(
                     user = user,
                     onBackClick = onLogout,
                     modifier = Modifier.padding(paddingValues)

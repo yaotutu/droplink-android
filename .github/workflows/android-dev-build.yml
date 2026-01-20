@@ -9,6 +9,10 @@ on:
   # 允许手动触发
   workflow_dispatch:
 
+# 授予 GitHub Actions 创建 Release 的权限
+permissions:
+  contents: write  # 允许创建/更新 Release 和 Tag
+
 jobs:
   build:
     name: 构建 Dev 版本
