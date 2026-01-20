@@ -50,10 +50,13 @@ jobs:
           COMMIT_COUNT=$(git rev-list --count HEAD)
           VERSION_NAME="0.1.${COMMIT_COUNT}"
           VERSION_CODE=${COMMIT_COUNT}
+          BUILD_TIME=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
           echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
           echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
+          echo "BUILD_TIME=$BUILD_TIME" >> $GITHUB_ENV
           echo "📦 Dev 版本号: $VERSION_NAME (versionCode: $VERSION_CODE)"
           echo "📊 基于 Git 提交总数: $COMMIT_COUNT"
+          echo "🕐 构建时间: $BUILD_TIME"
 
       # 运行单元测试
       - name: Run tests
@@ -96,7 +99,7 @@ jobs:
             **版本代码**: `${{ env.VERSION_CODE }}`
             **构建分支**: `dev`
             **提交 SHA**: `${{ github.sha }}`
-            **构建时间**: `$(date -u '+%Y-%m-%d %H:%M:%S UTC')`
+            **构建时间**: `${{ env.BUILD_TIME }}`
 
             ---
 
