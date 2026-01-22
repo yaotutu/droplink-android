@@ -11,7 +11,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import top.yaotutu.droplink.data.manager.SessionManager
 import top.yaotutu.droplink.ui.login.LoginScreen
-import top.yaotutu.droplink.ui.main.MainScreen
+import top.yaotutu.droplink.ui.messages.MessageScreenWithTopBar
+import top.yaotutu.droplink.ui.profile.ProfileScreenWithTopBar
 
 /**
  * 应用导航图
@@ -36,7 +37,7 @@ fun AppNavGraph(
     NavHost(
         navController = navController,
         startDestination = startDestination ?: if (sessionManager.isLoggedIn()) {
-            NavRoutes.MAIN
+            NavRoutes.MESSAGES  // 已登录用户默认进入消息列表
         } else {
             NavRoutes.LOGIN
         },
@@ -46,25 +47,39 @@ fun AppNavGraph(
         composable(route = NavRoutes.LOGIN) {
             LoginScreen(
                 onLoginSuccess = { email ->
-                    // 导航到主屏幕，并从栈中移除登录页面
-                    navController.navigate(NavRoutes.MAIN) {
+                    // 导航到消息列表，并从栈中移除登录页面
+                    navController.navigate(NavRoutes.MESSAGES) {
                         popUpTo(NavRoutes.LOGIN) { inclusive = true }
                     }
                 }
             )
         }
 
-        // 主屏幕（包含消息列表和个人中心）
-        composable(route = NavRoutes.MAIN) {
+        // 消息列表页面
+        composable(route = NavRoutes.MESSAGES) {
+            MessageScreenWithTopBar(
+                onProfileClick = {
+                    // 导航到个人中心
+                    navController.navigate(NavRoutes.PROFILE)
+                }
+            )
+        }
+
+        // 个人中心页面
+        composable(route = NavRoutes.PROFILE) {
             val user = sessionManager.getUser()
 
-            MainScreen(
+            ProfileScreenWithTopBar(
                 user = user,
+                onBackClick = {
+                    // 返回到消息列表
+                    navController.popBackStack()
+                },
                 onLogout = {
                     // 清除会话并返回登录页
                     sessionManager.clearSession()
                     navController.navigate(NavRoutes.LOGIN) {
-                        popUpTo(NavRoutes.MAIN) { inclusive = true }
+                        popUpTo(0) { inclusive = true }  // 清空整个返回栈
                     }
                 }
             )
