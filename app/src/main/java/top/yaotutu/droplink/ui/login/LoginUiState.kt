@@ -36,5 +36,10 @@ data class LoginUiState(
     val selfHostedClientToken: String = "",    // 自建服务器的 clientToken
     val gotifyServerUrlError: String? = null,
     val appTokenError: String? = null,
-    val clientTokenError: String? = null
+    val clientTokenError: String? = null,
+
+    // === 二维码登录模式字段 ===
+    val isScanning: Boolean = false,              // 是否正在扫描
+    val qrCodeError: String? = null,              // 二维码错误信息
+    val cameraPermissionGranted: Boolean = false  // 相机权限是否已授予
 )

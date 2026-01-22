@@ -4,7 +4,7 @@ package top.yaotutu.droplink.data.model
  * 登录模式枚举
  *
  * React 对标：
- * - 类似于 TypeScript enum LoginMode { Official, SelfHosted }
+ * - 类似于 TypeScript enum LoginMode { Official, SelfHosted, QrCode }
  * - 用于区分不同的登录认证方式
  *
  * 使用场景：
@@ -24,5 +24,15 @@ enum class LoginMode {
      *
      * 流程：用户提供 Gotify 地址 + appToken + clientToken → 调用 Gotify API 验证
      */
-    SELF_HOSTED
+    SELF_HOSTED,
+
+    /**
+     * 二维码登录模式（扫描配置二维码）
+     *
+     * 流程：扫描二维码 → 解析 JSON → 验证数据 → 调用 Gotify API 验证 → 保存配置
+     *
+     * React 对标：
+     * - 类似于 OAuth 扫码登录（微信、GitHub）
+     */
+    QR_CODE
 }

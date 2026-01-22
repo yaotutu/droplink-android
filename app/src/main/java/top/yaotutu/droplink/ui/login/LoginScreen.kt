@@ -100,11 +100,11 @@ fun LoginScreen(
     LaunchedEffect(uiState.isLoginSuccess) {
         val user = uiState.user
         if (uiState.isLoginSuccess && user != null) {
-            // 自建服务器模式使用 username，官方服务器使用 email
-            val displayName = if (uiState.loginMode == LoginMode.SELF_HOSTED) {
-                user.username
-            } else {
+            // 自建服务器模式和二维码模式使用 username，官方服务器使用 email
+            val displayName = if (uiState.loginMode == LoginMode.OFFICIAL) {
                 user.email
+            } else {
+                user.username
             }
             onLoginSuccess(displayName)
         }
@@ -147,7 +147,12 @@ fun LoginScreen(
             onGotifyServerUrlChange = viewModel::onGotifyServerUrlChange,
             onSelfHostedAppTokenChange = viewModel::onSelfHostedAppTokenChange,
             onSelfHostedClientTokenChange = viewModel::onSelfHostedClientTokenChange,
-            onSelfHostedLoginClick = viewModel::loginWithSelfHosted
+            onSelfHostedLoginClick = viewModel::loginWithSelfHosted,
+            // 二维码登录模式回调
+            onStartQrCodeScanning = viewModel::startQrCodeScanning,
+            onStopQrCodeScanning = viewModel::stopQrCodeScanning,
+            onQrCodeScanned = viewModel::onQrCodeScanned,
+            onCameraPermissionResult = viewModel::onCameraPermissionResult
         )
 
         // Snackbar 提示
@@ -185,7 +190,12 @@ fun LoginForm(
     onGotifyServerUrlChange: (String) -> Unit,
     onSelfHostedAppTokenChange: (String) -> Unit,
     onSelfHostedClientTokenChange: (String) -> Unit,
-    onSelfHostedLoginClick: () -> Unit
+    onSelfHostedLoginClick: () -> Unit,
+    // === 二维码登录模式回调 ===
+    onStartQrCodeScanning: () -> Unit,
+    onStopQrCodeScanning: () -> Unit,
+    onQrCodeScanned: (String) -> Unit,
+    onCameraPermissionResult: (Boolean) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -421,6 +431,16 @@ fun LoginForm(
                     onLoginClick = onSelfHostedLoginClick
                 )
             }
+            LoginMode.QR_CODE -> {
+                // === 二维码登录表单 ===
+                QrCodeLoginForm(
+                    uiState = uiState,
+                    onStartScanning = onStartQrCodeScanning,
+                    onStopScanning = onStopQrCodeScanning,
+                    onQrCodeScanned = onQrCodeScanned,
+                    onCameraPermissionResult = onCameraPermissionResult
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -442,16 +462,26 @@ fun LoginModeTabs(
 ) {
     val tabs = listOf(
         LoginMode.OFFICIAL to stringResource(R.string.login_mode_official),
-        LoginMode.SELF_HOSTED to stringResource(R.string.login_mode_self_hosted)
+        LoginMode.SELF_HOSTED to stringResource(R.string.login_mode_self_hosted),
+        LoginMode.QR_CODE to stringResource(R.string.login_mode_qr_code)
     )
 
     TabRow(
-        selectedTabIndex = if (selectedMode == LoginMode.OFFICIAL) 0 else 1,
+        selectedTabIndex = when (selectedMode) {
+            LoginMode.OFFICIAL -> 0
+            LoginMode.SELF_HOSTED -> 1
+            LoginMode.QR_CODE -> 2
+        },
         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         contentColor = MaterialTheme.colorScheme.onSurface,
         indicator = { tabPositions ->
+            val selectedIndex = when (selectedMode) {
+                LoginMode.OFFICIAL -> 0
+                LoginMode.SELF_HOSTED -> 1
+                LoginMode.QR_CODE -> 2
+            }
             TabRowDefaults.Indicator(
-                Modifier.tabIndicatorOffset(tabPositions[if (selectedMode == LoginMode.OFFICIAL) 0 else 1]),
+                Modifier.tabIndicatorOffset(tabPositions[selectedIndex]),
                 color = MaterialTheme.colorScheme.primary
             )
         }

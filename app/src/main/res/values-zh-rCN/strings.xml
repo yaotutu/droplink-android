@@ -150,4 +150,12 @@
     <string name="activity_filter_tabs">标签页</string>
     <string name="activity_filter_files">文件</string>
     <string name="activity_end_message">已到达活动记录底部</string>
+
+    <!-- ==================== 二维码登录 ==================== -->
+    <string name="login_mode_qr_code">二维码登录</string>
+    <string name="login_qr_code_title">扫描二维码登录</string>
+    <string name="login_qr_code_description">使用 Droplink 服务器生成的二维码快速登录</string>
+    <string name="login_qr_code_scan_button">扫描二维码</string>
+    <string name="login_qr_code_scanning_hint">将二维码放入扫描框内</string>
+    <string name="login_qr_code_stop_scanning">停止扫描</string>
 </resources>

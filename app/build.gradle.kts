@@ -100,6 +100,18 @@ dependencies {
     implementation(libs.okhttp.logging)                     // 日志拦截器（调试用）
     implementation(libs.kotlinx.serialization.json)         // JSON 序列化
 
+    // CameraX 依赖（二维码扫描）
+    implementation(libs.androidx.camera.core)               // CameraX 核心
+    implementation(libs.androidx.camera.camera2)            // Camera2 实现
+    implementation(libs.androidx.camera.lifecycle)          // 生命周期集成
+    implementation(libs.androidx.camera.view)               // 相机预览视图
+
+    // ML Kit 二维码扫描
+    implementation(libs.mlkit.barcode.scanning)             // 二维码识别
+
+    // Accompanist 权限库
+    implementation(libs.accompanist.permissions)            // 权限请求
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
