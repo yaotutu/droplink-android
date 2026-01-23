@@ -88,15 +88,20 @@ jobs:
       - name: Rename APK
         run: |
           mkdir -p output
+          # 创建固定文件名的 APK（用于永久下载链接）
+          cp app/build/outputs/apk/debug/app-debug.apk output/droplink-dev.apk
+          # 创建带版本号的 APK（用于归档）
           cp app/build/outputs/apk/debug/app-debug.apk output/droplink-dev-${{ env.VERSION_NAME }}.apk
-          echo "✅ APK 已重命名为: droplink-dev-${{ env.VERSION_NAME }}.apk"
+          echo "✅ APK 已重命名为: droplink-dev.apk 和 droplink-dev-${{ env.VERSION_NAME }}.apk"
 
       # 上传 APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: droplink-dev-${{ env.VERSION_NAME }}
-          path: output/droplink-dev-${{ env.VERSION_NAME }}.apk
+          path: |
+            output/droplink-dev.apk
+            output/droplink-dev-${{ env.VERSION_NAME }}.apk
           retention-days: 30
 
       # 自动发布到 GitHub Release (覆盖式发布 dev-latest)
@@ -121,14 +126,21 @@ jobs:
             - 每次 dev 分支更新时，此 Release 会被**自动覆盖**
             - 如需稳定版本，请访问 [正式版 Release](../../releases/tag/main-latest)
 
-            ### 🔗 固定下载链接（永久有效）
+            ### 🔗 固定下载链接（永久有效，用于二维码）
+            ```
+            https://github.com/${{ github.repository }}/releases/download/dev-latest/droplink-dev.apk
+            ```
+
+            ### 📥 带版本号的下载链接
             ```
             https://github.com/${{ github.repository }}/releases/download/dev-latest/droplink-dev-${{ env.VERSION_NAME }}.apk
             ```
 
             ### 📝 最近提交
             ${{ github.event.head_commit.message }}
-          files: output/droplink-dev-${{ env.VERSION_NAME }}.apk
+          files: |
+            output/droplink-dev.apk
+            output/droplink-dev-${{ env.VERSION_NAME }}.apk
           draft: false
           prerelease: true  # 标记为预发布版本
         env:
