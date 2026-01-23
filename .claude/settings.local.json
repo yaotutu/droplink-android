@@ -23,7 +23,8 @@
       "Bash(pip install:*)",
       "Bash(python:*)",
       "Bash(adb install:*)",
-      "Bash(adb shell screencap:*)"
+      "Bash(adb shell screencap:*)",
+      "Bash(git rev-list:*)"
     ]
   },
   "outputStyle": "Learning"

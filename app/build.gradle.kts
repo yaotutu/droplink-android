@@ -53,6 +53,13 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Debug 也使用 release 签名（确保 CI/CD 构建的 APK 可以互相覆盖安装）
+            if (System.getenv("KEYSTORE_PASSWORD") != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
+
         release {
             isMinifyEnabled = false
             proguardFiles(
