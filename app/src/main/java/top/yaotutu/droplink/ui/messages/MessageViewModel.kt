@@ -84,9 +84,16 @@ class MessageViewModel(
                     since = null
                 )
 
+                Log.d(TAG, "API returned ${response.messages.size} messages")
+
                 // 3. 转换为 UI Model（使用 mapNotNull 过滤无效消息）
                 val messageItems = response.messages.mapNotNull { detail ->
                     convertToMessageItem(detail)
+                }
+
+                Log.d(TAG, "After filtering: ${messageItems.size} valid messages")
+                if (messageItems.isEmpty() && response.messages.isNotEmpty()) {
+                    Log.w(TAG, "All ${response.messages.size} messages were filtered out!")
                 }
 
                 // 4. 更新状态
@@ -137,10 +144,14 @@ class MessageViewModel(
                     since = null
                 )
 
+                Log.d(TAG, "Refresh: API returned ${response.messages.size} messages")
+
                 // 3. 转换为 UI Model（使用 mapNotNull 过滤无效消息）
                 val messageItems = response.messages.mapNotNull { detail ->
                     convertToMessageItem(detail)
                 }
+
+                Log.d(TAG, "Refresh: After filtering: ${messageItems.size} valid messages")
 
                 // 4. 更新状态
                 _uiState.value = MessageUiState.Success(
@@ -192,10 +203,14 @@ class MessageViewModel(
                     since = lastMessageId
                 )
 
+                Log.d(TAG, "LoadMore: API returned ${response.messages.size} messages")
+
                 // 3. 转换为 UI Model（使用 mapNotNull 过滤无效消息）
                 val newMessageItems = response.messages.mapNotNull { detail ->
                     convertToMessageItem(detail)
                 }
+
+                Log.d(TAG, "LoadMore: After filtering: ${newMessageItems.size} valid messages")
 
                 // 4. 合并消息列表
                 val allMessages = currentState.messages + newMessageItems
@@ -248,61 +263,81 @@ class MessageViewModel(
             try {
                 // 确保是 JsonObject
                 if (droplinkElement !is JsonObject) {
-                    Log.w(TAG, "Filtered invalid Droplink message (id=${detail.id}): droplink is not an object")
-                    return null
+                    Log.w(TAG, "Droplink message (id=${detail.id}) is not an object, treating as plain message")
+                    // 降级为普通消息
+                    return MessageItem(
+                        id = "gotify_${detail.id}",
+                        gotifyId = detail.id,
+                        sender = "系统",
+                        contentType = "text",
+                        contentValue = detail.message,
+                        actions = emptyList(),
+                        timestamp = parseGotifyDate(detail.date),
+                        displayTime = formatTime(parseGotifyDate(detail.date)),
+                        tags = emptyList(),
+                        isRead = false
+                    )
                 }
 
                 val droplink = droplinkElement.jsonObject
 
-                // 解析 content（可能是对象或字符串）
+                // 解析 content（可能是对象或字符串，如果缺失则使用 Gotify 的 message 字段）
                 val contentType: String
                 val contentValue: String
 
                 val contentElement = droplink["content"]
                 if (contentElement == null) {
-                    Log.w(TAG, "Filtered invalid Droplink message (id=${detail.id}): missing content")
-                    return null
+                    Log.w(TAG, "Droplink message (id=${detail.id}) missing content, using Gotify message field")
+                    contentType = "text"
+                    contentValue = detail.message
+                } else {
+                    when (contentElement) {
+                        is JsonObject -> {
+                            // content 是对象: {"type": "url", "value": "..."}
+                            contentType = contentElement["type"]?.jsonPrimitive?.content ?: "text"
+                            contentValue = contentElement["value"]?.jsonPrimitive?.content ?: detail.message
+                        }
+                        is JsonPrimitive -> {
+                            // content 是字符串: "【测试】您的验证码是 123457"
+                            contentType = "text"
+                            contentValue = contentElement.content
+                        }
+                        else -> {
+                            Log.w(TAG, "Droplink message (id=${detail.id}) has invalid content type, using Gotify message")
+                            contentType = "text"
+                            contentValue = detail.message
+                        }
+                    }
                 }
 
-                when (contentElement) {
-                    is JsonObject -> {
-                        // content 是对象: {"type": "url", "value": "..."}
-                        contentType = contentElement["type"]?.jsonPrimitive?.content ?: "text"
-                        contentValue = contentElement["value"]?.jsonPrimitive?.content ?: ""
-                    }
-                    is JsonPrimitive -> {
-                        // content 是字符串: "【测试】您的验证码是 123457"
-                        contentType = "text"
-                        contentValue = contentElement.content
-                    }
-                    else -> {
-                        Log.w(TAG, "Filtered invalid Droplink message (id=${detail.id}): content has invalid type")
-                        return null
-                    }
-                }
-
-                // 解析 actions（必须是数组）
+                // 解析 actions（如果缺失或格式错误，使用空数组）
                 val actionsElement = droplink["actions"]
-                if (actionsElement == null) {
-                    Log.w(TAG, "Filtered invalid Droplink message (id=${detail.id}): missing actions")
-                    return null
-                }
+                val actions = if (actionsElement == null) {
+                    Log.w(TAG, "Droplink message (id=${detail.id}) missing actions, using empty list")
+                    emptyList()
+                } else if (actionsElement !is kotlinx.serialization.json.JsonArray) {
+                    Log.w(TAG, "Droplink message (id=${detail.id}) actions is not an array, using empty list")
+                    emptyList()
+                } else {
+                    // 解析 actions 数组
+                    actionsElement.jsonArray.mapNotNull { actionElement ->
+                        if (actionElement !is JsonObject) return@mapNotNull null
+                        val type = actionElement["type"]?.jsonPrimitive?.content ?: return@mapNotNull null
 
-                if (actionsElement !is kotlinx.serialization.json.JsonArray) {
-                    Log.w(TAG, "Filtered invalid Droplink message (id=${detail.id}): actions is not an array")
-                    return null
-                }
+                        // 安全解析 params.target（处理 params 为 null 的情况）
+                        val paramsElement = actionElement["params"]
+                        val target = if (paramsElement is JsonObject) {
+                            paramsElement["target"]?.jsonPrimitive?.content
+                        } else {
+                            null
+                        }
 
-                // 解析 actions 数组
-                val actions = actionsElement.jsonArray.mapNotNull { actionElement ->
-                    if (actionElement !is JsonObject) return@mapNotNull null
-                    val type = actionElement["type"]?.jsonPrimitive?.content ?: return@mapNotNull null
-                    val target = actionElement["params"]?.jsonObject?.get("target")?.jsonPrimitive?.content
-                    ActionItem(
-                        type = type,
-                        target = target,
-                        displayText = getActionDisplayText(type)
-                    )
+                        ActionItem(
+                            type = type,
+                            target = target,
+                            displayText = getActionDisplayText(type)
+                        )
+                    }
                 }
 
                 // 解析可选字段
@@ -324,6 +359,8 @@ class MessageViewModel(
                     emptyList()
                 }
 
+                Log.d(TAG, "Successfully parsed Droplink message (id=${detail.id}): sender=$sender, contentType=$contentType, actions=${actions.size}")
+
                 MessageItem(
                     id = messageId,
                     gotifyId = detail.id,
@@ -338,11 +375,24 @@ class MessageViewModel(
                 )
 
             } catch (e: Exception) {
-                Log.e(TAG, "Error parsing Droplink message (id=${detail.id})", e)
-                null  // 过滤掉解析失败的消息
+                Log.e(TAG, "Error parsing Droplink message (id=${detail.id}), treating as plain message", e)
+                // 降级为普通消息，而不是过滤掉
+                MessageItem(
+                    id = "gotify_${detail.id}",
+                    gotifyId = detail.id,
+                    sender = "系统",
+                    contentType = "text",
+                    contentValue = detail.message,
+                    actions = emptyList(),
+                    timestamp = parseGotifyDate(detail.date),
+                    displayTime = formatTime(parseGotifyDate(detail.date)),
+                    tags = emptyList(),
+                    isRead = false
+                )
             }
         } else {
             // 普通 Gotify 消息（兼容模式）
+            Log.d(TAG, "Plain Gotify message (id=${detail.id}): ${detail.message}")
             MessageItem(
                 id = "gotify_${detail.id}",
                 gotifyId = detail.id,
@@ -416,14 +466,48 @@ class MessageViewModel(
      * React 概念对标：
      * - const parseDate = (dateString) => new Date(dateString).getTime()
      *
-     * 格式: "2024-01-10T10:30:00Z"
+     * 支持多种格式:
+     * - "2024-01-10T10:30:00Z" (UTC)
+     * - "2026-01-16T22:37:36.811284405+08:00" (带时区和纳秒)
+     * - "2024-01-10T10:30:00.123Z" (带毫秒)
+     *
      * 返回: Unix timestamp (毫秒)
      */
     private fun parseGotifyDate(dateString: String): Long {
         return try {
-            val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
-            format.timeZone = TimeZone.getTimeZone("UTC")
-            format.parse(dateString)?.time ?: System.currentTimeMillis()
+            // 预处理：移除纳秒部分（超过3位的小数部分）
+            // 例如：2026-01-16T22:37:36.811284405+08:00 -> 2026-01-16T22:37:36.811+08:00
+            val processedDate = dateString.replace(Regex("\\.\\d{3}(\\d+)"), ".$1").replace(Regex("\\.\\d+(\\d{3})([+-Z])"), ".$1$2")
+
+            // 尝试多种日期格式
+            val formats = listOf(
+                // 带时区偏移和毫秒：2026-01-16T22:37:36.811+08:00
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.US),
+                // 带时区偏移无毫秒：2026-01-16T22:37:36+08:00
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US),
+                // UTC 格式带毫秒：2024-01-10T10:30:00.123Z
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                },
+                // UTC 格式无毫秒：2024-01-10T10:30:00Z
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                }
+            )
+
+            // 尝试每种格式
+            for (format in formats) {
+                try {
+                    return format.parse(processedDate)?.time ?: continue
+                } catch (e: Exception) {
+                    // 继续尝试下一种格式
+                    continue
+                }
+            }
+
+            // 所有格式都失败，记录错误并返回当前时间
+            Log.e(TAG, "Failed to parse date with all formats: $dateString")
+            System.currentTimeMillis()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to parse date: $dateString", e)
             System.currentTimeMillis()

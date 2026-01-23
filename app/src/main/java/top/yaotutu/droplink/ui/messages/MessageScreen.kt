@@ -57,6 +57,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import androidx.compose.ui.res.stringResource
+import top.yaotutu.droplink.R
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 
 /**
  * 消息列表页面 - 基于 Droplink 消息格式
@@ -136,7 +143,7 @@ fun MessageScreen(
                         ) {
                             Text(text = state.message)
                             Button(onClick = { viewModel.loadMessages() }) {
-                                Text("重试")
+                                Text(stringResource(R.string.message_retry))
                             }
                         }
                     }
@@ -349,7 +356,7 @@ fun EmptyMessageState() {
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Email,
-                        contentDescription = "暂无消息",
+                        contentDescription = stringResource(R.string.message_empty_title),
                         modifier = Modifier.size(40.dp),
                         tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
                     )
@@ -359,7 +366,7 @@ fun EmptyMessageState() {
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "暂无消息",
+                text = stringResource(R.string.message_empty_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -368,7 +375,7 @@ fun EmptyMessageState() {
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "当有新消息时，会在这里显示",
+                text = stringResource(R.string.message_empty_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -509,4 +516,52 @@ fun Modifier.shimmerEffect(): Modifier {
     )
 
     return this.background(brush)
+}
+
+/**
+ * 消息列表页面（带 TopAppBar）
+ *
+ * React 概念对标：
+ * - const MessagesPage = () => { return <><Header /><MessageList /></> }
+ *
+ * 设计原则：
+ * - 每个页面独立管理自己的 TopAppBar
+ * - TopAppBar 右上角添加个人中心入口
+ *
+ * @param onProfileClick 点击个人中心按钮的回调
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MessageScreenWithTopBar(
+    onProfileClick: () -> Unit = {}
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        stringResource(R.string.message_title),
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                actions = {
+                    // 右上角个人中心按钮
+                    IconButton(onClick = onProfileClick) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = stringResource(R.string.profile_title)
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        }
+    ) { paddingValues ->
+        MessageScreen(
+            modifier = Modifier.padding(paddingValues)
+        )
+    }
 }

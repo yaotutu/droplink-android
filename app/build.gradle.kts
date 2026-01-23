@@ -24,7 +24,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // 配置：服务器地址（类似前端的 .env）
-        buildConfigField("String", "AUTH_SERVER_URL", "\"http://192.168.123.100:3600\"")
+        buildConfigField("String", "AUTH_SERVER_URL", "\"http://111.228.1.24:3600\"")
         buildConfigField("String", "GOTIFY_SERVER_URL", "\"http://111.228.1.24:2345\"")
         buildConfigField("String", "TEST_VERIFICATION_CODE", "\"0000\"")
         buildConfigField("String", "API_KEY", "\"your_api_key_here\"")  // 保留原有的 API_KEY
@@ -67,11 +67,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
     buildFeatures {
         compose = true
@@ -99,6 +99,18 @@ dependencies {
     implementation(libs.okhttp.core)                        // OkHttp 核心
     implementation(libs.okhttp.logging)                     // 日志拦截器（调试用）
     implementation(libs.kotlinx.serialization.json)         // JSON 序列化
+
+    // CameraX 依赖（二维码扫描）
+    implementation(libs.androidx.camera.core)               // CameraX 核心
+    implementation(libs.androidx.camera.camera2)            // Camera2 实现
+    implementation(libs.androidx.camera.lifecycle)          // 生命周期集成
+    implementation(libs.androidx.camera.view)               // 相机预览视图
+
+    // ML Kit 二维码扫描
+    implementation(libs.mlkit.barcode.scanning)             // 二维码识别
+
+    // Accompanist 权限库
+    implementation(libs.accompanist.permissions)            // 权限请求
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

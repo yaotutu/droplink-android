@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "type": "droplink_qr_login",
+  "timestamp": 1737547200000,
+  "data": {
+    "gotifyServerUrl": "http://111.228.1.24:2345",
+    "appToken": "A1B2C3D4E5F6G7H8",
+    "clientToken": "X9Y8Z7W6V5U4T3S2",
+    "serverName": "测试服务器"
+  }
+}

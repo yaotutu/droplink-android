@@ -1,5 +1,7 @@
 package top.yaotutu.droplink.data.repository
 
+import top.yaotutu.droplink.data.model.QrCodeValidationResult
+import top.yaotutu.droplink.data.model.QrLoginData
 import top.yaotutu.droplink.data.model.User
 import top.yaotutu.droplink.data.model.ValidationResult
 
@@ -74,4 +76,42 @@ interface AuthRepository {
         appToken: String,
         clientToken: String
     ): Result<User>
+
+    // === 二维码登录模式方法 ===
+
+    /**
+     * 验证二维码数据格式和完整性
+     *
+     * @param qrCodeContent 二维码原始内容（JSON 字符串）
+     * @return QrCodeValidationResult 验证结果
+     *
+     * 验证步骤：
+     * 1. 解析 JSON 格式
+     * 2. 验证 type 字段是否为 "droplink_qr_login"
+     * 3. 验证时间戳是否过期（5 分钟有效期）
+     * 4. 验证必需字段是否存在
+     *
+     * React 对标：
+     * - function validateQrCodeData(qrCodeContent: string): QrCodeValidationResult
+     */
+    fun validateQrCodeData(qrCodeContent: String): QrCodeValidationResult
+
+    /**
+     * 使用二维码数据登录
+     *
+     * @param qrLoginData 已验证的二维码数据
+     * @return Result<User> 成功返回 User，失败返回异常
+     *
+     * React 对标：
+     * - async function loginWithQrCode(qrData: QrLoginData): Promise<User>
+     *
+     * 流程：
+     * 1. 提取二维码中的 gotifyServerUrl、appToken、clientToken
+     * 2. 调用 verifySelfHostedTokens() 验证 tokens 有效性
+     * 3. 如果成功：保存 tokens 和用户会话
+     * 4. 如果失败：返回错误
+     *
+     * 注意：此方法复用 verifySelfHostedTokens() 的核心逻辑
+     */
+    suspend fun loginWithQrCode(qrLoginData: QrLoginData): Result<User>
 }

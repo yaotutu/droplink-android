@@ -234,8 +234,8 @@ app/src/main/java/top/yaotutu/droplink/
 ### 4. 网络层设计
 
 **RetrofitClient 单例工厂**（双服务器配置）：
-- **认证服务器**：`http://192.168.123.100:8080`（发送验证码、验证用户）
-- **Gotify 服务器**：`http://111.228.1.24:18080`（发送/接收消息）
+- **认证服务器**：`http://111.228.1.24:3600`（发送验证码、验证用户）
+- **Gotify 服务器**：`http://111.228.1.24:2345`（发送/接收消息）
 
 **拦截器链**：
 1. **TokenInterceptor**：自动注入 `X-Gotify-Key` header（跳过认证端点）
@@ -349,6 +349,31 @@ viewModel.updateEmail(newValue)
 
 ## 开发注意事项
 
+### 国际化规范
+
+禁止硬编码任何用户可见的文本，必须使用 strings.xml 资源文件。
+
+错误示例：
+```kotlin
+Text("欢迎来到 Droplink")  // 禁止
+```
+
+正确示例：
+```kotlin
+import androidx.compose.ui.res.stringResource
+import top.yaotutu.droplink.R
+Text(stringResource(R.string.login_welcome_title))
+```
+
+所有字符串必须在两个文件中定义：
+- `app/src/main/res/values/strings.xml`（英文默认）
+- `app/src/main/res/values-zh-rCN/strings.xml`（简体中文）
+
+不同场景的使用方法：
+- Composable：`stringResource(R.string.xxx)`
+- ViewModel：`context.getString(R.string.xxx)`
+- Activity：`getString(R.string.xxx)`
+
 ### Compose 开发
 - 使用 `@Composable` 注解定义可组合函数
 - 使用 `@Preview` 注解创建 UI 预览(需在 `debugImplementation` 中)
@@ -414,9 +439,11 @@ Android 转型教练规则 (React To Android)
 
 5. 最佳实践评审 (Best Practice Review)
 
-规则：每当完成一个功能，请主动进行“Code Review”，指出代码是否符合 Android 性能优化标准（如避免不必要的重组、正确处理协程作用域等）。
-
-规范：强调 Strings.xml 资源管理和 Modifier 链式调用的标准写法，拒绝硬编码。
+规则：每当完成一个功能，请主动进行"Code Review"，指出代码是否符合 Android 性能优化标准（如避免不必要的重组、正确处理协程作用域等）。
 
 ## Rules
+
+- 禁止硬编码任何用户可见的文本（中文字符串），必须使用 strings.xml 资源文件
+- 所有字符串必须同时在 `values/strings.xml`（英文默认）和 `values-zh-rCN/strings.xml`（简体中文）中定义
+- Composable 中使用 `stringResource(R.string.xxx)`，ViewModel 中使用 `context.getString(R.string.xxx)`
 - 所有代码都必须有详细的中文注释

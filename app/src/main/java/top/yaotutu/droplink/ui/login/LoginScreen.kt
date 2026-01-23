@@ -100,11 +100,11 @@ fun LoginScreen(
     LaunchedEffect(uiState.isLoginSuccess) {
         val user = uiState.user
         if (uiState.isLoginSuccess && user != null) {
-            // 自建服务器模式使用 username，官方服务器使用 email
-            val displayName = if (uiState.loginMode == LoginMode.SELF_HOSTED) {
-                user.username
-            } else {
+            // 自建服务器模式和二维码模式使用 username，官方服务器使用 email
+            val displayName = if (uiState.loginMode == LoginMode.OFFICIAL) {
                 user.email
+            } else {
+                user.username
             }
             onLoginSuccess(displayName)
         }
@@ -147,7 +147,12 @@ fun LoginScreen(
             onGotifyServerUrlChange = viewModel::onGotifyServerUrlChange,
             onSelfHostedAppTokenChange = viewModel::onSelfHostedAppTokenChange,
             onSelfHostedClientTokenChange = viewModel::onSelfHostedClientTokenChange,
-            onSelfHostedLoginClick = viewModel::loginWithSelfHosted
+            onSelfHostedLoginClick = viewModel::loginWithSelfHosted,
+            // 二维码登录模式回调
+            onStartQrCodeScanning = viewModel::startQrCodeScanning,
+            onStopQrCodeScanning = viewModel::stopQrCodeScanning,
+            onQrCodeScanned = viewModel::onQrCodeScanned,
+            onCameraPermissionResult = viewModel::onCameraPermissionResult
         )
 
         // Snackbar 提示
@@ -185,7 +190,12 @@ fun LoginForm(
     onGotifyServerUrlChange: (String) -> Unit,
     onSelfHostedAppTokenChange: (String) -> Unit,
     onSelfHostedClientTokenChange: (String) -> Unit,
-    onSelfHostedLoginClick: () -> Unit
+    onSelfHostedLoginClick: () -> Unit,
+    // === 二维码登录模式回调 ===
+    onStartQrCodeScanning: () -> Unit,
+    onStopQrCodeScanning: () -> Unit,
+    onQrCodeScanned: (String) -> Unit,
+    onCameraPermissionResult: (Boolean) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -266,8 +276,8 @@ fun LoginForm(
                 OutlinedTextField(
                     value = uiState.serverAddress,
                     onValueChange = onServerAddressChange,
-                    label = { Text("服务器地址") },
-                    placeholder = { Text("http://111.228.1.24:2345/") },
+                    label = { Text(stringResource(R.string.login_server_address_label)) },
+                    placeholder = { Text(stringResource(R.string.login_server_address_hint)) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Filled.Lock,
@@ -382,7 +392,7 @@ fun LoginForm(
         // === 登录按钮 ===
         Button(
             onClick = onLoginClick,
-            enabled = !uiState.isLoading && uiState.verificationCode.length == 4,
+            enabled = !uiState.isLoading && uiState.verificationCode.length == 6,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -421,6 +431,16 @@ fun LoginForm(
                     onLoginClick = onSelfHostedLoginClick
                 )
             }
+            LoginMode.QR_CODE -> {
+                // === 二维码登录表单 ===
+                QrCodeLoginForm(
+                    uiState = uiState,
+                    onStartScanning = onStartQrCodeScanning,
+                    onStopScanning = onStopQrCodeScanning,
+                    onQrCodeScanned = onQrCodeScanned,
+                    onCameraPermissionResult = onCameraPermissionResult
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -441,17 +461,27 @@ fun LoginModeTabs(
     enabled: Boolean = true
 ) {
     val tabs = listOf(
-        LoginMode.OFFICIAL to "官方服务器",
-        LoginMode.SELF_HOSTED to "自建服务器"
+        LoginMode.OFFICIAL to stringResource(R.string.login_mode_official),
+        LoginMode.SELF_HOSTED to stringResource(R.string.login_mode_self_hosted),
+        LoginMode.QR_CODE to stringResource(R.string.login_mode_qr_code)
     )
 
     TabRow(
-        selectedTabIndex = if (selectedMode == LoginMode.OFFICIAL) 0 else 1,
+        selectedTabIndex = when (selectedMode) {
+            LoginMode.OFFICIAL -> 0
+            LoginMode.SELF_HOSTED -> 1
+            LoginMode.QR_CODE -> 2
+        },
         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         contentColor = MaterialTheme.colorScheme.onSurface,
         indicator = { tabPositions ->
+            val selectedIndex = when (selectedMode) {
+                LoginMode.OFFICIAL -> 0
+                LoginMode.SELF_HOSTED -> 1
+                LoginMode.QR_CODE -> 2
+            }
             TabRowDefaults.Indicator(
-                Modifier.tabIndicatorOffset(tabPositions[if (selectedMode == LoginMode.OFFICIAL) 0 else 1]),
+                Modifier.tabIndicatorOffset(tabPositions[selectedIndex]),
                 color = MaterialTheme.colorScheme.primary
             )
         }
@@ -503,8 +533,8 @@ fun SelfHostedLoginForm(
             OutlinedTextField(
                 value = uiState.gotifyServerUrl,
                 onValueChange = onGotifyServerUrlChange,
-                label = { Text("Gotify 服务器地址") },
-                placeholder = { Text("http://192.168.1.100:8080") },
+                label = { Text(stringResource(R.string.login_gotify_server_label)) },
+                placeholder = { Text(stringResource(R.string.login_gotify_server_hint)) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Filled.Lock,
@@ -531,8 +561,8 @@ fun SelfHostedLoginForm(
             OutlinedTextField(
                 value = uiState.selfHostedAppToken,
                 onValueChange = onAppTokenChange,
-                label = { Text("App Token") },
-                placeholder = { Text("Ah17tk7rkgdueDR") },
+                label = { Text(stringResource(R.string.login_app_token_label)) },
+                placeholder = { Text(stringResource(R.string.login_app_token_hint)) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Lock,
@@ -559,8 +589,8 @@ fun SelfHostedLoginForm(
             OutlinedTextField(
                 value = uiState.selfHostedClientToken,
                 onValueChange = onClientTokenChange,
-                label = { Text("Client Token") },
-                placeholder = { Text("CNfL5mCmRXBb8Jo") },
+                label = { Text(stringResource(R.string.login_client_token_label)) },
+                placeholder = { Text(stringResource(R.string.login_client_token_hint)) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Lock,
@@ -585,7 +615,7 @@ fun SelfHostedLoginForm(
 
             // === 提示文本 ===
             Text(
-                text = "请在 Gotify 服务器中创建应用获取 Token",
+                text = stringResource(R.string.login_self_hosted_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 4.dp)
@@ -623,7 +653,7 @@ fun SelfHostedLoginForm(
             )
         } else {
             Text(
-                text = "登录",
+                text = stringResource(R.string.login_self_hosted_button),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )

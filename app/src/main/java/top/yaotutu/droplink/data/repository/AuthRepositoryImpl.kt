@@ -2,8 +2,12 @@ package top.yaotutu.droplink.data.repository
 
 import android.content.Context
 import android.util.Log
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
 import top.yaotutu.droplink.data.manager.SessionManager
 import top.yaotutu.droplink.data.manager.TokenManager
+import top.yaotutu.droplink.data.model.QrCodeValidationResult
+import top.yaotutu.droplink.data.model.QrLoginData
 import top.yaotutu.droplink.data.model.User
 import top.yaotutu.droplink.data.model.ValidationResult
 import top.yaotutu.droplink.data.network.RetrofitClient
@@ -50,7 +54,7 @@ class AuthRepositoryImpl(
     override fun validateVerificationCode(code: String): ValidationResult {
         return when {
             code.isEmpty() -> ValidationResult(false, "验证码不能为空")
-            code.length != 4 -> ValidationResult(false, "验证码必须是4位")
+            code.length != 6 -> ValidationResult(false, "验证码必须是6位")
             !code.all { it.isDigit() } -> ValidationResult(false, "验证码必须全部为数字")
             else -> ValidationResult(true)
         }
@@ -201,5 +205,58 @@ class AuthRepositoryImpl(
             Log.e(TAG, "自建服务器验证失败: $errorMessage", networkException)
             Result.failure(Exception(errorMessage, networkException))
         }
+    }
+
+    // === 二维码登录模式方法实现 ===
+
+    override fun validateQrCodeData(qrCodeContent: String): QrCodeValidationResult {
+        return try {
+            // 1. 解析 JSON
+            val json = Json { ignoreUnknownKeys = true }
+            val qrData = json.decodeFromString<QrLoginData>(qrCodeContent)
+
+            // 2. 验证类型
+            if (qrData.type != "droplink_qr_login") {
+                return QrCodeValidationResult.Error("无效的二维码类型")
+            }
+
+            // 3. 验证时间戳（5 分钟有效期）
+            val currentTime = System.currentTimeMillis()
+            val timeDiff = currentTime - qrData.timestamp
+            if (timeDiff > 5 * 60 * 1000L) {
+                return QrCodeValidationResult.Error("二维码已过期，请重新生成")
+            }
+            if (timeDiff < 0) {
+                return QrCodeValidationResult.Error("二维码时间戳无效")
+            }
+
+            // 4. 验证必需字段
+            if (qrData.data.gotifyServerUrl.isEmpty() ||
+                qrData.data.appToken.isEmpty() ||
+                qrData.data.clientToken.isEmpty()) {
+                return QrCodeValidationResult.Error("二维码数据不完整")
+            }
+
+            Log.d(TAG, "二维码验证成功: ${qrData.data.gotifyServerUrl}")
+            QrCodeValidationResult.Success(qrData)
+
+        } catch (e: SerializationException) {
+            Log.e(TAG, "二维码格式错误", e)
+            QrCodeValidationResult.Error("二维码格式错误")
+        } catch (e: Exception) {
+            Log.e(TAG, "解析二维码失败", e)
+            QrCodeValidationResult.Error("解析二维码失败: ${e.message}")
+        }
+    }
+
+    override suspend fun loginWithQrCode(qrLoginData: QrLoginData): Result<User> {
+        Log.d(TAG, "开始二维码登录: ${qrLoginData.data.gotifyServerUrl}")
+
+        // 直接复用 verifySelfHostedTokens() 的逻辑
+        return verifySelfHostedTokens(
+            gotifyServerUrl = qrLoginData.data.gotifyServerUrl,
+            appToken = qrLoginData.data.appToken,
+            clientToken = qrLoginData.data.clientToken
+        )
     }
 }

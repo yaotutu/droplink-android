@@ -21,12 +21,12 @@ import java.nio.charset.StandardCharsets
  * 日志示例：
  * ```
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- * 🚀 请求: POST http://192.168.123.100:3600/api/auth/verify
+ * 🚀 请求: POST http://111.228.1.24:3600/api/auth/verify
  * Headers: Content-Type: application/json
  * Body: {"email":"test@example.com","code":"0000"}
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  * ✅ 响应: 200 (耗时: 1234ms)
- * URL: http://192.168.123.100:3600/api/auth/verify
+ * URL: http://111.228.1.24:3600/api/auth/verify
  * Response Body: {"email":"test@example.com","appToken":"xxx"}
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  * ```
