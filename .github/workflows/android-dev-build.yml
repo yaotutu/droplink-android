@@ -110,6 +110,8 @@ jobs:
         with:
           tag_name: dev-latest
           name: "🚀 Dev 开发版 (最新)"
+          make_latest: false  # 不标记为最新正式版
+          target_commitish: ${{ github.sha }}  # 强制 tag 指向当前提交
           body: |
             ## 📦 Droplink Dev 开发版 - 自动构建
 

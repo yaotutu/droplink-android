@@ -125,6 +125,8 @@ jobs:
         with:
           tag_name: main-latest
           name: "✅ 正式版 (最新稳定版)"
+          make_latest: true  # 标记为最新正式版
+          target_commitish: ${{ github.sha }}  # 强制 tag 指向当前提交
           body: |
             ## 📦 Droplink 正式版 - 稳定发布
 
