@@ -24,7 +24,8 @@
       "Bash(python:*)",
       "Bash(adb install:*)",
       "Bash(adb shell screencap:*)",
-      "Bash(git rev-list:*)"
+      "Bash(git rev-list:*)",
+      "Bash(git remote:*)"
     ]
   },
   "outputStyle": "Learning"

@@ -52,20 +52,23 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      # 设置版本号（基于 Git 提交总数，与 dev 分支保持一致）
+      # 设置版本号（从 version.properties 读取主版本号，正式版不带后缀）
       - name: 设置版本号
         id: version
         run: |
-          # 使用 Git 提交总数作为版本号基准（与 dev 分支一致）
-          COMMIT_COUNT=$(git rev-list --count HEAD)
-          VERSION_NAME="0.1.${COMMIT_COUNT}"
-          VERSION_CODE=${COMMIT_COUNT}
+          # 从 version.properties 读取主版本号（如 0.1）
+          MAJOR_MINOR=$(grep "MAJOR_MINOR=" version.properties | cut -d'=' -f2)
+
+          # Main 正式版格式: 0.1.0（不带 -dev 后缀）
+          VERSION_NAME="${MAJOR_MINOR}.0"
+          VERSION_CODE=$(git rev-list --count HEAD)
           BUILD_TIME=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+
           echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
           echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
           echo "BUILD_TIME=$BUILD_TIME" >> $GITHUB_ENV
           echo "📦 Release 版本号: $VERSION_NAME (versionCode: $VERSION_CODE)"
-          echo "📊 基于 Git 提交总数: $COMMIT_COUNT"
+          echo "📊 主版本: $MAJOR_MINOR"
           echo "🕐 构建时间: $BUILD_TIME"
 
       # 缓存 Gradle 依赖（加速构建）
@@ -100,15 +103,20 @@ jobs:
       - name: Rename APK
         run: |
           mkdir -p output
+          # 创建固定文件名的 APK（用于永久下载链接）
+          cp app/build/outputs/apk/release/app-release.apk output/droplink-release.apk
+          # 创建带版本号的 APK（用于归档）
           cp app/build/outputs/apk/release/app-release.apk output/droplink-release-${{ env.VERSION_NAME }}.apk
-          echo "✅ APK 已重命名为: droplink-release-${{ env.VERSION_NAME }}.apk"
+          echo "✅ APK 已重命名为: droplink-release.apk 和 droplink-release-${{ env.VERSION_NAME }}.apk"
 
       # 上传 APK 到 Artifacts
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: droplink-release-${{ env.VERSION_NAME }}
-          path: output/droplink-release-${{ env.VERSION_NAME }}.apk
+          path: |
+            output/droplink-release.apk
+            output/droplink-release-${{ env.VERSION_NAME }}.apk
           retention-days: 90
 
       # 自动发布到 GitHub Release (覆盖式发布 main-latest)
@@ -133,14 +141,21 @@ jobs:
             - 每次 main 分支更新时，此 Release 会被**自动覆盖**
             - 如需测试最新功能，请访问 [Dev 开发版 Release](../../releases/tag/dev-latest)
 
-            ### 🔗 固定下载链接（永久有效）
+            ### 🔗 固定下载链接（永久有效，用于二维码）
+            ```
+            https://github.com/${{ github.repository }}/releases/download/main-latest/droplink-release.apk
+            ```
+
+            ### 📥 带版本号的下载链接
             ```
             https://github.com/${{ github.repository }}/releases/download/main-latest/droplink-release-${{ env.VERSION_NAME }}.apk
             ```
 
             ### 📝 最近提交
             ${{ github.event.head_commit.message }}
-          files: output/droplink-release-${{ env.VERSION_NAME }}.apk
+          files: |
+            output/droplink-release.apk
+            output/droplink-release-${{ env.VERSION_NAME }}.apk
           draft: false
           prerelease: false  # 标记为正式版本
         env:
