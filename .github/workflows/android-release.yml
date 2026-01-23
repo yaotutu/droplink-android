@@ -52,20 +52,23 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      # 设置版本号（基于 Git 提交总数，与 dev 分支保持一致）
+      # 设置版本号（从 version.properties 读取主版本号，正式版不带后缀）
       - name: 设置版本号
         id: version
         run: |
-          # 使用 Git 提交总数作为版本号基准（与 dev 分支一致）
-          COMMIT_COUNT=$(git rev-list --count HEAD)
-          VERSION_NAME="0.1.${COMMIT_COUNT}"
-          VERSION_CODE=${COMMIT_COUNT}
+          # 从 version.properties 读取主版本号（如 0.1）
+          MAJOR_MINOR=$(grep "MAJOR_MINOR=" version.properties | cut -d'=' -f2)
+
+          # Main 正式版格式: 0.1.0（不带 -dev 后缀）
+          VERSION_NAME="${MAJOR_MINOR}.0"
+          VERSION_CODE=$(git rev-list --count HEAD)
           BUILD_TIME=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+
           echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
           echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
           echo "BUILD_TIME=$BUILD_TIME" >> $GITHUB_ENV
           echo "📦 Release 版本号: $VERSION_NAME (versionCode: $VERSION_CODE)"
-          echo "📊 基于 Git 提交总数: $COMMIT_COUNT"
+          echo "📊 主版本: $MAJOR_MINOR"
           echo "🕐 构建时间: $BUILD_TIME"
 
       # 缓存 Gradle 依赖（加速构建）
