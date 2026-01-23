@@ -119,13 +119,18 @@ jobs:
             output/droplink-release-${{ env.VERSION_NAME }}.apk
           retention-days: 90
 
+      # 删除旧的 main-latest tag（如果存在）
+      - name: Delete old main-latest tag
+        run: |
+          git push origin :refs/tags/main-latest || true
+        continue-on-error: true
+
       # 自动发布到 GitHub Release (覆盖式发布 main-latest)
       - name: Create or Update Main Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: main-latest
           name: "✅ 正式版 (最新稳定版)"
-          make_latest: true  # 标记为最新正式版
           target_commitish: ${{ github.sha }}  # 强制 tag 指向当前提交
           body: |
             ## 📦 Droplink 正式版 - 稳定发布
