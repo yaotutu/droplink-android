@@ -48,8 +48,8 @@ jobs:
       - name: 设置版本号
         id: version
         run: |
-          # 从 version.properties 读取主版本号（如 0.1），去除空格和换行符
-          MAJOR_MINOR=$(grep "MAJOR_MINOR=" version.properties | cut -d'=' -f2 | tr -d '[:space:]')
+          # 从 version.properties 读取主版本号（如 0.1），排除注释行，去除空格和换行符
+          MAJOR_MINOR=$(grep "^MAJOR_MINOR=" version.properties | cut -d'=' -f2 | tr -d '[:space:]')
 
           # 计算当前分支自上次合并到 main 后的提交数作为次版本号
           # 如果无法计算，则使用提交总数
