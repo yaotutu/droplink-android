@@ -105,18 +105,14 @@ jobs:
           mkdir -p output
           # 创建固定文件名的 APK（用于永久下载链接）
           cp app/build/outputs/apk/release/app-release.apk output/droplink-release.apk
-          # 创建带版本号的 APK（用于归档）
-          cp app/build/outputs/apk/release/app-release.apk output/droplink-release-${{ env.VERSION_NAME }}.apk
-          echo "✅ APK 已重命名为: droplink-release.apk 和 droplink-release-${{ env.VERSION_NAME }}.apk"
+          echo "✅ APK 已重命名为: droplink-release.apk"
 
       # 上传 APK 到 Artifacts
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: droplink-release-${{ env.VERSION_NAME }}
-          path: |
-            output/droplink-release.apk
-            output/droplink-release-${{ env.VERSION_NAME }}.apk
+          path: output/droplink-release.apk
           retention-days: 90
 
       # 删除旧的 main-latest tag（如果存在）
@@ -153,16 +149,9 @@ jobs:
             https://github.com/${{ github.repository }}/releases/download/main-latest/droplink-release.apk
             ```
 
-            ### 📥 带版本号的下载链接
-            ```
-            https://github.com/${{ github.repository }}/releases/download/main-latest/droplink-release-${{ env.VERSION_NAME }}.apk
-            ```
-
             ### 📝 最近提交
             ${{ github.event.head_commit.message }}
-          files: |
-            output/droplink-release.apk
-            output/droplink-release-${{ env.VERSION_NAME }}.apk
+          files: output/droplink-release.apk
           draft: false
           prerelease: false  # 标记为正式版本
         env:
