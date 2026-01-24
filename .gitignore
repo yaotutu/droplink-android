@@ -127,3 +127,8 @@ apikey.properties
 
 # 签名配置信息文件（敏感信息）
 SIGNING_CONFIG.txt
+
+# ===========================
+# Claude Code AI 助手配置
+# ===========================
+.claude/

@@ -48,24 +48,23 @@ jobs:
       - name: 设置版本号
         id: version
         run: |
-          # 从 version.properties 读取主版本号（如 0.1）
-          MAJOR_MINOR=$(grep "MAJOR_MINOR=" version.properties | cut -d'=' -f2)
+          # 从 version.properties 读取主版本号（如 0.1），排除注释行，去除空格和换行符
+          MAJOR_MINOR=$(grep "^MAJOR_MINOR=" version.properties | cut -d'=' -f2 | tr -d '[:space:]')
 
-          # 计算当前分支自上次合并到 main 后的提交数作为次版本号
-          # 如果无法计算，则使用提交总数
-          PATCH_COUNT=$(git rev-list --count HEAD ^origin/main 2>/dev/null || git rev-list --count HEAD)
+          # 使用 dev 分支的总提交数作为次版本号（确保 main 可以继承相同的版本号）
+          PATCH_COUNT=$(git rev-list --count HEAD)
 
           # Dev 版本格式: 0.1.3-dev
           VERSION_NAME="${MAJOR_MINOR}.${PATCH_COUNT}-dev"
           VERSION_CODE=$(git rev-list --count HEAD)
           BUILD_TIME=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
 
-          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
-          echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
-          echo "BUILD_TIME=$BUILD_TIME" >> $GITHUB_ENV
-          echo "📦 Dev 版本号: $VERSION_NAME (versionCode: $VERSION_CODE)"
-          echo "📊 主版本: $MAJOR_MINOR, 次版本: $PATCH_COUNT"
-          echo "🕐 构建时间: $BUILD_TIME"
+          echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_ENV
+          echo "VERSION_CODE=${VERSION_CODE}" >> $GITHUB_ENV
+          echo "BUILD_TIME=${BUILD_TIME}" >> $GITHUB_ENV
+          echo "📦 Dev 版本号: ${VERSION_NAME} (versionCode: ${VERSION_CODE})"
+          echo "📊 主版本: ${MAJOR_MINOR}, 次版本: ${PATCH_COUNT}"
+          echo "🕐 构建时间: ${BUILD_TIME}"
 
       # 运行单元测试
       - name: Run tests
@@ -88,16 +87,23 @@ jobs:
       - name: Rename APK
         run: |
           mkdir -p output
-          cp app/build/outputs/apk/debug/app-debug.apk output/droplink-dev-${{ env.VERSION_NAME }}.apk
-          echo "✅ APK 已重命名为: droplink-dev-${{ env.VERSION_NAME }}.apk"
+          # 创建固定文件名的 APK（用于永久下载链接）
+          cp app/build/outputs/apk/debug/app-debug.apk output/droplink-dev.apk
+          echo "✅ APK 已重命名为: droplink-dev.apk"
 
       # 上传 APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: droplink-dev-${{ env.VERSION_NAME }}
-          path: output/droplink-dev-${{ env.VERSION_NAME }}.apk
+          path: output/droplink-dev.apk
           retention-days: 30
+
+      # 删除旧的 dev-latest tag（如果存在）
+      - name: Delete old dev-latest tag
+        run: |
+          git push origin :refs/tags/dev-latest || true
+        continue-on-error: true
 
       # 自动发布到 GitHub Release (覆盖式发布 dev-latest)
       - name: Create or Update Dev Release
@@ -105,6 +111,7 @@ jobs:
         with:
           tag_name: dev-latest
           name: "🚀 Dev 开发版 (最新)"
+          target_commitish: ${{ github.sha }}  # 强制 tag 指向当前提交
           body: |
             ## 📦 Droplink Dev 开发版 - 自动构建
 
@@ -121,14 +128,14 @@ jobs:
             - 每次 dev 分支更新时，此 Release 会被**自动覆盖**
             - 如需稳定版本，请访问 [正式版 Release](../../releases/tag/main-latest)
 
-            ### 🔗 固定下载链接（永久有效）
+            ### 🔗 固定下载链接（永久有效，用于二维码）
             ```
-            https://github.com/${{ github.repository }}/releases/download/dev-latest/droplink-dev-${{ env.VERSION_NAME }}.apk
+            https://github.com/${{ github.repository }}/releases/download/dev-latest/droplink-dev.apk
             ```
 
             ### 📝 最近提交
             ${{ github.event.head_commit.message }}
-          files: output/droplink-dev-${{ env.VERSION_NAME }}.apk
+          files: output/droplink-dev.apk
           draft: false
           prerelease: true  # 标记为预发布版本
         env:
