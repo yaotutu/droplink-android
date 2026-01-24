@@ -51,9 +51,8 @@ jobs:
           # 从 version.properties 读取主版本号（如 0.1），排除注释行，去除空格和换行符
           MAJOR_MINOR=$(grep "^MAJOR_MINOR=" version.properties | cut -d'=' -f2 | tr -d '[:space:]')
 
-          # 计算当前分支自上次合并到 main 后的提交数作为次版本号
-          # 如果无法计算，则使用提交总数
-          PATCH_COUNT=$(git rev-list --count HEAD ^origin/main 2>/dev/null || git rev-list --count HEAD)
+          # 使用 dev 分支的总提交数作为次版本号（确保 main 可以继承相同的版本号）
+          PATCH_COUNT=$(git rev-list --count HEAD)
 
           # Dev 版本格式: 0.1.3-dev
           VERSION_NAME="${MAJOR_MINOR}.${PATCH_COUNT}-dev"
