@@ -118,13 +118,8 @@ jobs:
           path: output/droplink-release.apk
           retention-days: 90
 
-      # 删除旧的 main-latest tag（如果存在）
-      - name: Delete old main-latest tag
-        run: |
-          git push origin :refs/tags/main-latest || true
-        continue-on-error: true
-
       # 自动发布到 GitHub Release (覆盖式发布 main-latest)
+      # 注意：softprops/action-gh-release 会自动覆盖已存在的 Release，无需手动删除 tag
       - name: Create or Update Main Release
         uses: softprops/action-gh-release@v1
         with:
