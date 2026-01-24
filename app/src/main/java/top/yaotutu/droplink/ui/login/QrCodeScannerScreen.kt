@@ -6,9 +6,10 @@ import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +23,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -35,22 +38,17 @@ import top.yaotutu.droplink.R
 import java.util.concurrent.Executors
 
 /**
- * 二维码扫描器视图
- *
- * 技术栈：
- * - CameraX: 相机预览
- * - ML Kit: 二维码识别
- * - Accompanist Permissions: 权限请求
+ * 二维码扫描页面
  *
  * React 对标：
- * - 类似于 react-qr-reader 组件
+ * - 独立的全屏扫码页面
+ * - 类似于微信扫一扫
  */
-@OptIn(ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
-fun QrCodeScannerView(
+fun QrCodeScannerScreen(
     onQrCodeScanned: (String) -> Unit,
-    onStopScanning: () -> Unit,
-    onCameraPermissionResult: (Boolean) -> Unit
+    onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -58,9 +56,7 @@ fun QrCodeScannerView(
     // 相机权限请求
     val cameraPermissionState = rememberPermissionState(
         permission = Manifest.permission.CAMERA
-    ) { granted ->
-        onCameraPermissionResult(granted)
-    }
+    )
 
     // 在组件首次加载时请求权限
     LaunchedEffect(Unit) {
@@ -69,65 +65,105 @@ fun QrCodeScannerView(
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(500.dp)
-    ) {
-        if (cameraPermissionState.status.isGranted) {
-            // === 相机预览 ===
-            CameraPreview(
-                onQrCodeScanned = onQrCodeScanned,
-                lifecycleOwner = lifecycleOwner
-            )
-
-            // === 扫描框覆盖层 ===
-            ScanningOverlay()
-
-            // === 停止扫描按钮 ===
-            IconButton(
-                onClick = onStopScanning,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = stringResource(R.string.login_qr_code_stop_scanning),
-                    tint = Color.White
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = stringResource(R.string.login_qr_code_title),
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "返回"
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Black,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
                 )
-            }
-
-            // === 提示文本 ===
-            Text(
-                text = stringResource(R.string.login_qr_code_scanning_hint),
-                color = Color.White,
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 32.dp)
             )
-        } else {
-            // === 权限未授予提示 ===
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.login_qr_code_camera_permission_denied),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.error
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(Color.Black)
+        ) {
+            if (cameraPermissionState.status.isGranted) {
+                // === 相机预览 ===
+                CameraPreviewFullScreen(
+                    onQrCodeScanned = onQrCodeScanned,
+                    lifecycleOwner = lifecycleOwner
                 )
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = { cameraPermissionState.launchPermissionRequest() }) {
-                    Text(stringResource(R.string.login_qr_code_grant_permission))
+
+                // === 扫描框覆盖层 ===
+                ScanningOverlayFullScreen()
+
+                // === 提示文本 ===
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 48.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = stringResource(R.string.login_qr_code_scanning_hint),
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.login_qr_code_auto_scan_hint),
+                        color = Color.White.copy(alpha = 0.7f),
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center
+                    )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-                TextButton(onClick = onStopScanning) {
-                    Text(stringResource(R.string.login_qr_code_cancel))
+            } else {
+                // === 权限未授予提示 ===
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.login_qr_code_camera_permission_required),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(R.string.login_qr_code_camera_permission_desc),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(32.dp))
+                    Button(
+                        onClick = { cameraPermissionState.launchPermissionRequest() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Text(stringResource(R.string.login_qr_code_grant_permission))
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextButton(onClick = onNavigateBack) {
+                        Text(stringResource(R.string.login_qr_code_back), color = Color.White)
+                    }
                 }
             }
         }
@@ -135,12 +171,10 @@ fun QrCodeScannerView(
 }
 
 /**
- * 相机预览组件
- *
- * 使用 CameraX 实现相机预览和图像分析
+ * 全屏相机预览组件
  */
 @Composable
-fun CameraPreview(
+fun CameraPreviewFullScreen(
     onQrCodeScanned: (String) -> Unit,
     lifecycleOwner: androidx.lifecycle.LifecycleOwner
 ) {
@@ -153,20 +187,22 @@ fun CameraPreview(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Text(
                 text = stringResource(R.string.login_qr_code_camera_init_failed),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.error
+                style = MaterialTheme.typography.titleLarge,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = cameraError ?: "未知错误",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = Color.White.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
             )
         }
         return
@@ -235,69 +271,22 @@ fun CameraPreview(
 }
 
 /**
- * 二维码分析器
- *
- * 使用 ML Kit 识别二维码
- */
-class QrCodeAnalyzer(
-    private val onQrCodeDetected: (String) -> Unit
-) : ImageAnalysis.Analyzer {
-
-    private val scanner = BarcodeScanning.getClient()
-
-    @androidx.camera.core.ExperimentalGetImage
-    override fun analyze(imageProxy: ImageProxy) {
-        val mediaImage = imageProxy.image
-        if (mediaImage != null) {
-            val image = InputImage.fromMediaImage(
-                mediaImage,
-                imageProxy.imageInfo.rotationDegrees
-            )
-
-            scanner.process(image)
-                .addOnSuccessListener { barcodes ->
-                    for (barcode in barcodes) {
-                        when (barcode.valueType) {
-                            Barcode.TYPE_TEXT,
-                            Barcode.TYPE_URL -> {
-                                barcode.rawValue?.let { value ->
-                                    onQrCodeDetected(value)
-                                }
-                            }
-                        }
-                    }
-                }
-                .addOnFailureListener { e ->
-                    Log.e("QrCodeAnalyzer", "二维码识别失败", e)
-                }
-                .addOnCompleteListener {
-                    imageProxy.close()
-                }
-        } else {
-            imageProxy.close()
-        }
-    }
-}
-
-/**
- * 扫描框覆盖层
- *
- * 绘制半透明遮罩和扫描框
+ * 全屏扫描框覆盖层
  */
 @Composable
-fun ScanningOverlay() {
+fun ScanningOverlayFullScreen() {
     Canvas(modifier = Modifier.fillMaxSize()) {
         val canvasWidth = size.width
         val canvasHeight = size.height
 
-        // 扫描框尺寸（正方形）
-        val scanBoxSize = minOf(canvasWidth, canvasHeight) * 0.7f
+        // 扫描框尺寸（正方形，占屏幕宽度的 70%）
+        val scanBoxSize = canvasWidth * 0.7f
         val scanBoxLeft = (canvasWidth - scanBoxSize) / 2
         val scanBoxTop = (canvasHeight - scanBoxSize) / 2
 
         // 绘制半透明遮罩（扫描框外的区域）
         drawRect(
-            color = Color.Black.copy(alpha = 0.5f),
+            color = Color.Black.copy(alpha = 0.6f),
             size = size
         )
 
@@ -306,32 +295,33 @@ fun ScanningOverlay() {
             color = Color.Transparent,
             topLeft = Offset(scanBoxLeft, scanBoxTop),
             size = Size(scanBoxSize, scanBoxSize),
-            cornerRadius = CornerRadius(16.dp.toPx()),
+            cornerRadius = CornerRadius(24.dp.toPx()),
             blendMode = BlendMode.Clear
         )
 
         // 绘制扫描框边框
         drawRoundRect(
-            color = Color.White,
+            color = Color.White.copy(alpha = 0.8f),
             topLeft = Offset(scanBoxLeft, scanBoxTop),
             size = Size(scanBoxSize, scanBoxSize),
-            cornerRadius = CornerRadius(16.dp.toPx()),
-            style = Stroke(width = 4.dp.toPx())
+            cornerRadius = CornerRadius(24.dp.toPx()),
+            style = Stroke(width = 3.dp.toPx())
         )
 
         // 绘制四个角的装饰线
-        val cornerLength = 40.dp.toPx()
-        val cornerWidth = 6.dp.toPx()
+        val cornerLength = 60.dp.toPx()
+        val cornerWidth = 8.dp.toPx()
+        val cornerColor = Color(0xFF4CAF50) // 绿色
 
         // 左上角
         drawLine(
-            color = Color.Green,
+            color = cornerColor,
             start = Offset(scanBoxLeft, scanBoxTop),
             end = Offset(scanBoxLeft + cornerLength, scanBoxTop),
             strokeWidth = cornerWidth
         )
         drawLine(
-            color = Color.Green,
+            color = cornerColor,
             start = Offset(scanBoxLeft, scanBoxTop),
             end = Offset(scanBoxLeft, scanBoxTop + cornerLength),
             strokeWidth = cornerWidth
@@ -339,13 +329,13 @@ fun ScanningOverlay() {
 
         // 右上角
         drawLine(
-            color = Color.Green,
+            color = cornerColor,
             start = Offset(scanBoxLeft + scanBoxSize, scanBoxTop),
             end = Offset(scanBoxLeft + scanBoxSize - cornerLength, scanBoxTop),
             strokeWidth = cornerWidth
         )
         drawLine(
-            color = Color.Green,
+            color = cornerColor,
             start = Offset(scanBoxLeft + scanBoxSize, scanBoxTop),
             end = Offset(scanBoxLeft + scanBoxSize, scanBoxTop + cornerLength),
             strokeWidth = cornerWidth
@@ -353,13 +343,13 @@ fun ScanningOverlay() {
 
         // 左下角
         drawLine(
-            color = Color.Green,
+            color = cornerColor,
             start = Offset(scanBoxLeft, scanBoxTop + scanBoxSize),
             end = Offset(scanBoxLeft + cornerLength, scanBoxTop + scanBoxSize),
             strokeWidth = cornerWidth
         )
         drawLine(
-            color = Color.Green,
+            color = cornerColor,
             start = Offset(scanBoxLeft, scanBoxTop + scanBoxSize),
             end = Offset(scanBoxLeft, scanBoxTop + scanBoxSize - cornerLength),
             strokeWidth = cornerWidth
@@ -367,13 +357,13 @@ fun ScanningOverlay() {
 
         // 右下角
         drawLine(
-            color = Color.Green,
+            color = cornerColor,
             start = Offset(scanBoxLeft + scanBoxSize, scanBoxTop + scanBoxSize),
             end = Offset(scanBoxLeft + scanBoxSize - cornerLength, scanBoxTop + scanBoxSize),
             strokeWidth = cornerWidth
         )
         drawLine(
-            color = Color.Green,
+            color = cornerColor,
             start = Offset(scanBoxLeft + scanBoxSize, scanBoxTop + scanBoxSize),
             end = Offset(scanBoxLeft + scanBoxSize, scanBoxTop + scanBoxSize - cornerLength),
             strokeWidth = cornerWidth

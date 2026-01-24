@@ -11,6 +11,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import top.yaotutu.droplink.data.manager.SessionManager
 import top.yaotutu.droplink.ui.login.LoginScreen
+import top.yaotutu.droplink.ui.login.QrCodeScannerScreen
+import top.yaotutu.droplink.ui.login.LoginViewModelFactory
 import top.yaotutu.droplink.ui.messages.MessageScreenWithTopBar
 import top.yaotutu.droplink.ui.profile.ProfileScreenWithTopBar
 
@@ -34,6 +36,8 @@ fun AppNavGraph(
     modifier: Modifier = Modifier,
     startDestination: String? = null
 ) {
+    val context = LocalContext.current
+
     NavHost(
         navController = navController,
         startDestination = startDestination ?: if (sessionManager.isLoggedIn()) {
@@ -51,6 +55,30 @@ fun AppNavGraph(
                     navController.navigate(NavRoutes.MESSAGES) {
                         popUpTo(NavRoutes.LOGIN) { inclusive = true }
                     }
+                },
+                onNavigateToScanner = {
+                    // 导航到扫码页面
+                    navController.navigate(NavRoutes.QR_SCANNER)
+                }
+            )
+        }
+
+        // 二维码扫描页面
+        composable(route = NavRoutes.QR_SCANNER) {
+            val loginViewModel: top.yaotutu.droplink.ui.login.LoginViewModel = viewModel(
+                factory = LoginViewModelFactory(context)
+            )
+
+            QrCodeScannerScreen(
+                onQrCodeScanned = { qrCode ->
+                    // 处理扫描结果
+                    loginViewModel.onQrCodeScanned(qrCode)
+                    // 返回登录页面
+                    navController.popBackStack()
+                },
+                onNavigateBack = {
+                    // 返回登录页面
+                    navController.popBackStack()
                 }
             )
         }
