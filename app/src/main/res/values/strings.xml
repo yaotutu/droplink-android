@@ -158,4 +158,14 @@
     <string name="login_qr_code_scan_button">Scan QR Code</string>
     <string name="login_qr_code_scanning_hint">Place the QR code inside the scanning frame</string>
     <string name="login_qr_code_stop_scanning">Stop Scanning</string>
+    <string name="login_qr_code_auto_scan_hint">The QR code will be scanned automatically when placed in the frame</string>
+    <string name="login_qr_code_how_to_get">How to get QR code?</string>
+    <string name="login_qr_code_how_to_get_desc">Generate a login QR code on the Droplink server management page</string>
+    <string name="login_qr_code_camera_permission_required">Camera permission is required to scan QR codes</string>
+    <string name="login_qr_code_camera_permission_desc">Please grant camera permission to continue</string>
+    <string name="login_qr_code_grant_permission">Grant Permission</string>
+    <string name="login_qr_code_back">Back</string>
+    <string name="login_qr_code_cancel">Cancel</string>
+    <string name="login_qr_code_camera_init_failed">Camera initialization failed</string>
+    <string name="login_qr_code_camera_permission_denied">Camera permission required to scan QR codes</string>
 </resources>

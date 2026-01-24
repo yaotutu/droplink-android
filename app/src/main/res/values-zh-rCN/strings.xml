@@ -158,4 +158,14 @@
     <string name="login_qr_code_scan_button">扫描二维码</string>
     <string name="login_qr_code_scanning_hint">将二维码放入扫描框内</string>
     <string name="login_qr_code_stop_scanning">停止扫描</string>
+    <string name="login_qr_code_auto_scan_hint">将二维码放入框内即可自动扫描</string>
+    <string name="login_qr_code_how_to_get">如何获取二维码？</string>
+    <string name="login_qr_code_how_to_get_desc">在 Droplink 服务器管理页面生成登录二维码</string>
+    <string name="login_qr_code_camera_permission_required">需要相机权限才能扫描二维码</string>
+    <string name="login_qr_code_camera_permission_desc">请授予相机权限以继续</string>
+    <string name="login_qr_code_grant_permission">授予权限</string>
+    <string name="login_qr_code_back">返回</string>
+    <string name="login_qr_code_cancel">取消</string>
+    <string name="login_qr_code_camera_init_failed">相机初始化失败</string>
+    <string name="login_qr_code_camera_permission_denied">需要相机权限才能扫描二维码</string>
 </resources>
