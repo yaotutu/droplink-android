@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 这是一个基于 Jetpack Compose 的 Android 应用,使用现代 Android 开发最佳实践。
 
+**最近更新**: 2026-01-26 - 优化 CI/CD Release 策略，确保版本正确替换而非创建新版本。
+
 ## 构建命令
 
 ```bash
