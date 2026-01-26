@@ -119,13 +119,14 @@ jobs:
           retention-days: 90
 
       # 自动发布到 GitHub Release (覆盖式发布 main-latest)
-      # 注意：softprops/action-gh-release 会自动覆盖已存在的 Release，无需手动删除 tag
+      # 注意：使用 softprops/action-gh-release 的覆盖模式，确保 Release 被完全替换
       - name: Create or Update Main Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: main-latest
           name: "✅ 正式版 (最新稳定版)"
           target_commitish: ${{ github.sha }}  # 强制 tag 指向当前提交
+          make_latest: true  # 标记为最新版本
           body: |
             ## 📦 Droplink 正式版 - 稳定发布
 
@@ -169,7 +170,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📥 固定下载链接" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "https://github.com/${{ github.repository }}/releases/download/main-latest/droplink-release-${{ env.VERSION_NAME }}.apk" >> $GITHUB_STEP_SUMMARY
+          echo "https://github.com/${{ github.repository }}/releases/download/main-latest/droplink-release.apk" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           if [[ $GITHUB_REF == refs/tags/* ]]; then
             echo "" >> $GITHUB_STEP_SUMMARY
