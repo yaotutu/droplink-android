@@ -99,15 +99,10 @@ jobs:
           path: output/droplink-dev.apk
           retention-days: 30
 
-      # 删除旧的 dev-latest tag（如果存在）
-      - name: Delete old dev-latest tag
-        run: |
-          git push origin :refs/tags/dev-latest || true
-        continue-on-error: true
-
       # 自动发布到 GitHub Release (覆盖式发布 dev-latest)
+      # 注意：softprops/action-gh-release 会自动覆盖已存在的 Release，无需手动删除 tag
       - name: Create or Update Dev Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: dev-latest
           name: "🚀 Dev 开发版 (最新)"
@@ -154,5 +149,5 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📥 固定下载链接" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "https://github.com/${{ github.repository }}/releases/download/dev-latest/droplink-dev-${{ env.VERSION_NAME }}.apk" >> $GITHUB_STEP_SUMMARY
+          echo "https://github.com/${{ github.repository }}/releases/download/dev-latest/droplink-dev.apk" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
