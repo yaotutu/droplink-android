@@ -155,50 +155,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 自动创建版本标签（用于归档历史版本）
-      - name: Create Version Tag
-        run: |
-          VERSION_TAG="v${{ env.VERSION_NAME }}"
-          echo "📌 创建版本标签: ${VERSION_TAG}"
-
-          # 删除旧的同名标签（如果存在）
-          git push origin :refs/tags/${VERSION_TAG} || true
-
-          # 创建新标签并推送
-          git tag ${VERSION_TAG}
-          git push origin ${VERSION_TAG}
-        continue-on-error: false
-
-      # 为版本标签创建永久 Release（用于历史归档）
-      - name: Create Versioned Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: v${{ env.VERSION_NAME }}
-          name: "📦 Droplink v${{ env.VERSION_NAME }}"
-          body: |
-            ## 📦 Droplink 正式版 v${{ env.VERSION_NAME }}
-
-            **版本号**: `${{ env.VERSION_NAME }}`
-            **版本代码**: `${{ env.VERSION_CODE }}`
-            **构建分支**: `main`
-            **提交 SHA**: `${{ github.sha }}`
-            **构建时间**: `${{ env.BUILD_TIME }}`
-
-            ---
-
-            ### 📥 下载说明
-            - 这是**历史归档版本**，用于追溯和回退
-            - 如需最新稳定版本，请访问 [正式版 Release](../../releases/tag/main-latest)
-            - 如需测试最新功能，请访问 [Dev 开发版 Release](../../releases/tag/dev-latest)
-
-            ### 📝 最近提交
-            ${{ github.event.head_commit.message }}
-          files: output/droplink-release.apk
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       # 构建信息摘要
       - name: Build summary
         if: success()
