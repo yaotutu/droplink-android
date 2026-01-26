@@ -38,6 +38,12 @@ fun AppNavGraph(
 ) {
     val context = LocalContext.current
 
+    // 在 NavHost 外部创建共享的 LoginViewModel
+    // 这样登录页面和扫码页面可以共享同一个 ViewModel 实例
+    val loginViewModel: top.yaotutu.droplink.ui.login.LoginViewModel = viewModel(
+        factory = LoginViewModelFactory(context)
+    )
+
     NavHost(
         navController = navController,
         startDestination = startDestination ?: if (sessionManager.isLoggedIn()) {
@@ -50,6 +56,7 @@ fun AppNavGraph(
         // 登录页面
         composable(route = NavRoutes.LOGIN) {
             LoginScreen(
+                viewModel = loginViewModel,  // 使用共享的 ViewModel
                 onLoginSuccess = { email ->
                     // 导航到消息列表，并从栈中移除登录页面
                     navController.navigate(NavRoutes.MESSAGES) {
@@ -65,13 +72,9 @@ fun AppNavGraph(
 
         // 二维码扫描页面
         composable(route = NavRoutes.QR_SCANNER) {
-            val loginViewModel: top.yaotutu.droplink.ui.login.LoginViewModel = viewModel(
-                factory = LoginViewModelFactory(context)
-            )
-
             QrCodeScannerScreen(
                 onQrCodeScanned = { qrCode ->
-                    // 处理扫描结果
+                    // 处理扫描结果（使用共享的 ViewModel）
                     loginViewModel.onQrCodeScanned(qrCode)
                     // 返回登录页面
                     navController.popBackStack()
